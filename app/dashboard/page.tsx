@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import { ModalReserva } from "../../components/modal-reserva";
 
 export default function DashboardClienta() {
   const [perfil, setPerfil] = useState<any>(null);
   const [misReservas, setMisReservas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -95,8 +97,10 @@ export default function DashboardClienta() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-foreground text-xs uppercase tracking-widest">Cargando tu estudio...</div>;
 
-  // Filtramos para ocultar las clases de ayer o más antiguas
-  const misClasesActivas = misReservas.filter(r => calcularHorasFaltantes(r.claseInfo.dia, r.claseInfo.horario) > -2);
+ // Filtramos y ORDENAMOS cronológicamente las clases (las más próximas primero)
+ const misClasesActivas = misReservas
+ .filter(r => calcularHorasFaltantes(r.claseInfo.dia, r.claseInfo.horario) > -2)
+ .sort((a, b) => calcularHorasFaltantes(a.claseInfo.dia, a.claseInfo.horario) - calcularHorasFaltantes(b.claseInfo.dia, b.claseInfo.horario));
 
   return (
     <main className="min-h-screen bg-background text-foreground bg-[url('/images/studio-hero.png')] bg-cover bg-fixed bg-center relative">
@@ -109,8 +113,11 @@ export default function DashboardClienta() {
             <p className="text-xs uppercase tracking-widest text-primary mb-2 font-bold">Mi Espacio</p>
             <h1 className="font-serif text-4xl text-foreground">Hola, {perfil?.nombre?.split(' ')[0] || "Clienta"}</h1>
           </div>
-          <div className="flex gap-4">
-            <button onClick={() => router.push("/")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">← Volver al Inicio</button>
+          <div className="flex flex-wrap items-center justify-end gap-4">
+          <button onClick={() => setIsModalOpen(true)} className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer shadow-sm">
+              + Nueva Reserva
+            </button>
+            <button onClick={() => router.push("/")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">← Inicio</button>
             <button onClick={cerrarSesion} className="text-sm font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer">Cerrar Sesión</button>
           </div>
         </header>
@@ -153,15 +160,19 @@ export default function DashboardClienta() {
               <div className="bg-card/30 backdrop-blur-md border border-dashed border-border p-12 rounded-2xl text-center">
                 <span className="text-4xl mb-4 block">🧘‍♀️</span>
                 <p className="text-muted-foreground">No tienes ninguna clase programada.</p>
-                <button onClick={() => router.push("/")} className="mt-6 bg-foreground text-background px-6 py-3 rounded text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer">
+                <button onClick={() => setIsModalOpen(true)} className="mt-6 bg-foreground text-background px-6 py-3 rounded text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer">
                   Reservar Ahora
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
-                {misClasesActivas.map((reserva) => {
+               {misClasesActivas.map((reserva) => {
                   const horasFaltantes = calcularHorasFaltantes(reserva.claseInfo.dia, reserva.claseInfo.horario);
                   const estaEnPenalizacion = horasFaltantes > 0 && horasFaltantes < 12;
+                  
+                  // Vacuna de Zona Horaria para evitar que el navegador reste 6 horas
+                  const [year, month, day] = reserva.claseInfo.dia.split('-');
+                  const fechaLocalExacta = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
                   return (
                     <div key={reserva.id} className="bg-card/60 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-transform hover:-translate-y-1">
@@ -178,7 +189,7 @@ export default function DashboardClienta() {
                             </span>
                           )}
                         </div>
-                        <h4 className="font-serif text-2xl mt-2">{new Date(reserva.claseInfo.dia).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</h4>
+                        <h4 className="font-serif text-2xl mt-2">{fechaLocalExacta.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</h4>
                         <p className="text-primary font-medium">{reserva.claseInfo.horario}</p>
                       </div>
 
@@ -193,9 +204,19 @@ export default function DashboardClienta() {
                 })}
               </div>
             )}
-          </div>
+ </div>
         </div>
       </div>
+      
+      {/* AQUÍ INYECTAMOS EL MODAL FLOTANTE */}
+      <ModalReserva 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        perfil={perfil}
+        onActualizarPerfil={(nuevoPerfil: any) => setPerfil(nuevoPerfil)}
+        onReservaExitosa={cargarDatos}
+      />
+
     </main>
   );
 }

@@ -36,6 +36,23 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+  // AGREGAR ESTO: Metadatos Premium para WhatsApp, iMessage y Facebook
+  openGraph: {
+    title: 'Control Balance | Estudio de Pilates Reformer',
+    description: 'Respira. Conecta. Transforma. Reserva tu clase en nuestro estudio boutique en Monterrey.',
+    url: 'https://control-balance-pilates.vercel.app/', // Aquí va el link real de tu página
+    siteName: 'Control Balance',
+    images: [
+      {
+        url: 'https://control-balance-pilates.vercel.app/images/fondo.jpeg', // Usamos tu imagen de fondo
+        width: 1200,
+        height: 630,
+        alt: 'Control Balance Pilates Studio',
+      },
+    ],
+    locale: 'es_MX',
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {
