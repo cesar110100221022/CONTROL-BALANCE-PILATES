@@ -159,7 +159,8 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   };
 
   const clasesDelDia = clasesDisponibles
-    .filter((c) => c.dia === diaSeleccionado)
+    // Usamos .startsWith() por si Supabase le pega horas (ej. 2026-08-03T00:00:00)
+    .filter((c) => c.dia && c.dia.startsWith(diaSeleccionado))
     .sort((a, b) => convertirAMinutos(a.horario) - convertirAMinutos(b.horario));
 
   return (
@@ -379,3 +380,6 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     </section>
   );
 }
+
+
+// Forzando a Vercel
