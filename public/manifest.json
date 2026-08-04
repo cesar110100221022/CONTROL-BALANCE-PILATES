@@ -1,0 +1,23 @@
+{
+    "name": "Control Balance Pilates",
+    "short_name": "Ctrl Balance",
+    "description": "Estudio Boutique de Pilates Reformer en Monterrey",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f5efe6",
+    "theme_color": "#f5efe6",
+    "icons": [
+      {
+        "src": "/logo.PNG",
+        "sizes": "180x180",
+        "type": "image/png",
+        "purpose": "any maskable"
+      },
+      {
+        "src": "/logo.PNG",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ]
+  }

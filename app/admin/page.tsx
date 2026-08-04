@@ -238,6 +238,67 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
       setIsLoading(false);
     }
   };
+  // --- INICIO: CONTROL DE LISTA DE ESPERA ---
+  const promoverListaEspera = async (espera: any, claseId: string) => {
+    if (!confirm(`¿Estás segura de agendar a ${espera.nombre_cliente} en esta clase?\n\nAl confirmar, se le restará 1 crédito y pasará a ser una reserva oficial.`)) return;
+
+    setIsLoading(true);
+    try {
+      // 1. Buscar a la clienta para restarle el crédito
+      const clienta = clientes.find(c => c.whatsapp === espera.whatsapp);
+      
+      if (clienta) {
+        if (clienta.creditos <= 0) {
+          const forzar = confirm(`⚠️ ${clienta.nombre} NO tiene créditos. ¿Quieres agendarla de todos modos y que su saldo quede en números rojos?`);
+          if (!forzar) {
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Restar crédito
+        const nuevosCreditos = (clienta.creditos || 0) - 1;
+        await supabase.from("perfiles").update({ creditos: nuevosCreditos }).eq("id", clienta.id);
+        setClientes(clientes.map(c => c.id === clienta.id ? { ...c, creditos: nuevosCreditos } : c));
+      }
+
+      // 2. Crear la reserva
+      const { data: nuevaReserva, error: errorReserva } = await supabase.from("reservas").insert([{
+        nombre_cliente: espera.nombre_cliente,
+        whatsapp: espera.whatsapp,
+        clase_id: claseId
+      }]).select();
+
+      if (errorReserva) throw errorReserva;
+      if (nuevaReserva) setReservas([nuevaReserva[0], ...reservas]);
+
+      // 3. Borrar de lista de espera
+      await supabase.from("lista_espera").delete().eq("id", espera.id);
+      setListaEspera(listaEspera.filter(e => e.id !== espera.id));
+
+      alert(`¡Listo! ${espera.nombre_cliente} ha sido agendada con éxito.`);
+    } catch (error) {
+      console.error("Error al promover:", error);
+      alert("Hubo un error al agendar a la clienta.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const descartarListaEspera = async (esperaId: string, nombre: string) => {
+    if (!confirm(`¿Deseas descartar a ${nombre} de la fila?\nSimplemente desaparecerá de la lista y NO se le cobrará ningún crédito.`)) return;
+    
+    setIsLoading(true);
+    try {
+      await supabase.from("lista_espera").delete().eq("id", esperaId);
+      setListaEspera(listaEspera.filter(e => e.id !== esperaId));
+    } catch (error) {
+      alert("Error al limpiar la lista.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // --- FIN: CONTROL DE LISTA DE ESPERA ---
 
   // --- INICIO: FUNCIÓN WHATSAPP 1-CLIC ---
   const abrirWhatsApp = (nombre: string, telefono: string, claseNombre: string, horario: string) => {
@@ -303,13 +364,22 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
 
   const convertirAMinutos = (horario: string) => {
     if (!horario) return 0;
-    const [horaMin, ampm] = horario.split(' ');
-    if (!horaMin || !ampm) return 0;
+    const partes = horario.trim().split(' ');
+    if (partes.length < 2) return 0;
+    
+    const [horaMin, ampm] = [partes[0], partes[1]];
     const [h, m] = horaMin.split(':');
+    
     let hora = parseInt(h, 10);
+    let minutos = m ? parseInt(m, 10) : 0; // Evita el error "NaN" si no escriben los minutos
+    
+    if (isNaN(hora)) hora = 0;
+    if (isNaN(minutos)) minutos = 0;
+    
     if (ampm.toUpperCase() === 'PM' && hora !== 12) hora += 12;
     if (ampm.toUpperCase() === 'AM' && hora === 12) hora = 0;
-    return hora * 60 + parseInt(m, 10);
+    
+    return hora * 60 + minutos;
   };
 
   const clasesDelDia = clases
@@ -626,19 +696,38 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
                                 </p>
                                 <ul className="space-y-2">
                                   {enEspera.map(espera => (
-                                    <li key={espera.id} className="text-sm flex justify-between items-center text-foreground bg-amber-500/10 px-3 py-2 rounded border border-amber-500/20">
-                                      <div>
-                                        <span className="font-medium block">{espera.nombre_cliente}</span>
-                                        <span className="text-xs text-muted-foreground font-mono">{espera.whatsapp}</span>
-                                      </div>
+                                    <li key={espera.id} className="text-sm flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-foreground bg-amber-500/10 px-3 py-3 rounded border border-amber-500/20">
+                                    <div>
+                                      <span className="font-medium block">{espera.nombre_cliente}</span>
+                                      <span className="text-xs text-muted-foreground font-mono">{espera.whatsapp}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
                                       <button 
                                         type="button"
                                         onClick={() => abrirWhatsApp(espera.nombre_cliente, espera.whatsapp, clase.nombre, clase.horario)}
-                                        className="bg-[#25D366] hover:bg-[#1ebd5a] text-white px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                                        className="bg-[#25D366] hover:bg-[#1ebd5a] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                                        title="Preguntar por WhatsApp"
                                       >
-                                        WhatsApp
+                                        💬 WA
                                       </button>
-                                    </li>
+                                      <button 
+                                        type="button"
+                                        onClick={() => promoverListaEspera(espera, clase.id)}
+                                        className="bg-primary hover:opacity-90 text-primary-foreground px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                                        title="Agendar en la clase y cobrar crédito"
+                                      >
+                                        ✅ Agendar
+                                      </button>
+                                      <button 
+                                        type="button"
+                                        onClick={() => descartarListaEspera(espera.id, espera.nombre_cliente)}
+                                        className="bg-card hover:bg-red-50 border border-red-200 text-red-600 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        title="Sacar de la lista sin cobrar"
+                                      >
+                                        ❌
+                                      </button>
+                                    </div>
+                                  </li>
                                   ))}
                                 </ul>
                               </div>

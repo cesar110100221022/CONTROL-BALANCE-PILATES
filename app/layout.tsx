@@ -53,6 +53,7 @@ export const metadata: Metadata = {
     locale: 'es_MX',
     type: 'website',
   },
+  manifest: '/manifest.json', // <-- ESTA ES LA LÍNEA NUEVA MAGICA
 }
 
 export const viewport: Viewport = {
