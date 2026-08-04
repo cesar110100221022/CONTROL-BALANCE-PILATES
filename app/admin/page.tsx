@@ -47,7 +47,7 @@ const obtenerDias = () => [...Array(7)].map((_, i) => {
  // --- INICIO: CATÁLOGO DE PAQUETES ---
  const PAQUETES = [
   { id: 1, nombre: "Clase suelta", clases: 1, precio: 240 },
-  { id: 2, nombre: "Paquete de 8 clases", clases: 8, precio: 1050 },
+  { id: 2, nombre: "Paquete de 8 clases", clases: 8, precio: 1200 },
   { id: 3, nombre: "Paquete de 12 clases", clases: 12, precio: 1680 },
   { id: 4, nombre: "Paquete de 16 clases", clases: 16, precio: 2160 },
   { id: 5, nombre: "Paquete de 20 clases", clases: 20, precio: 2640 },
@@ -148,7 +148,44 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
     }
     setClientes(clientes.map(c => c.id === id ? { ...c, creditos: nuevosCreditos } : c));
   };
+// --- INICIO: SISTEMA DE REFERIDOS ---
+const premiarReferido = async (whatsappReferente: string, clientaId: string, nombreClienta: string) => {
+  if (!confirm(`¿Deseas regalarle 1 crédito al número ${whatsappReferente} por haber invitado a ${nombreClienta}?`)) return;
 
+  setIsLoading(true);
+  try {
+    // 1. Buscar a la clienta que hizo la invitación
+    const { data: referente } = await supabase.from("perfiles").select("*").eq("whatsapp", whatsappReferente).single();
+
+    if (!referente) {
+      alert("No se encontró a ninguna clienta con ese número de WhatsApp. Tal vez lo escribió mal.");
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. Sumarle el crédito a la que invitó
+    const nuevosCreditos = (referente.creditos || 0) + 1;
+    await supabase.from("perfiles").update({ creditos: nuevosCreditos }).eq("id", referente.id);
+
+    // 3. Marcar a la clienta nueva como "Ya premiada" para no dar el bono 2 veces
+    const marcaPremiado = `¡PREMIADO! (${whatsappReferente})`;
+    await supabase.from("perfiles").update({ referido_por: marcaPremiado }).eq("id", clientaId);
+
+    // 4. Actualizar la pantalla de Liliana
+    setClientes(clientes.map(c => {
+      if (c.id === referente.id) return { ...c, creditos: nuevosCreditos };
+      if (c.id === clientaId) return { ...c, referido_por: marcaPremiado };
+      return c;
+    }));
+
+    alert(`¡Éxito! Se le regaló 1 crédito automáticamente a ${referente.nombre}.`);
+  } catch (error) {
+    alert("Hubo un error al procesar el premio.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+// --- FIN: SISTEMA DE REFERIDOS ---
   const crearClase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoNombreClase || !nuevoHorario) {
@@ -496,11 +533,30 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
               <tbody>
                 {clientesFiltrados.map((cliente) => (
                   <tr key={cliente.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
-                    <td className="p-5">
-                      <p className="font-medium text-lg">{cliente.nombre || "Sin nombre"}</p>
-                      <p className="text-xs text-muted-foreground mt-1 tracking-wider">{cliente.whatsapp || "Registrada por email"}</p>
-                    </td>
-                    <td className="p-5 text-center"><span className="text-3xl font-serif text-primary">{cliente.creditos || 0}</span></td>
+                  <td className="p-5">
+                    <p className="font-medium text-lg">{cliente.nombre || "Sin nombre"}</p>
+                    <p className="text-xs text-muted-foreground mt-1 tracking-wider">{cliente.whatsapp || "Registrada por email"}</p>
+                    
+                    {/* --- AVISO DE REFERIDO --- */}
+                    {cliente.referido_por && !cliente.referido_por.includes("PREMIADO") && (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="bg-amber-100 text-amber-800 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-amber-200">
+                          🎁 Invitada por: {cliente.referido_por}
+                        </span>
+                        <button onClick={() => premiarReferido(cliente.referido_por, cliente.id, cliente.nombre)} className="bg-amber-500 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded hover:bg-amber-600 transition-colors cursor-pointer shadow-sm">
+                          Dar Premio
+                        </button>
+                      </div>
+                    )}
+                    {cliente.referido_por?.includes("PREMIADO") && (
+                      <span className="inline-block mt-3 text-[10px] uppercase tracking-wider text-emerald-600 font-bold">
+                        ✅ Bono de invitación entregado
+                      </span>
+                    )}
+                    {/* --- FIN AVISO --- */}
+
+                  </td>
+                  <td className="p-5 text-center"><span className="text-3xl font-serif text-primary">{cliente.creditos || 0}</span></td>
                     <td className="p-5 text-right">
                       <div className="flex justify-end gap-3">
                         <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, -1)} className="w-10 h-10 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-xl cursor-pointer">-</button>
