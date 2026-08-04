@@ -19,6 +19,7 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nombreInput, setNombreInput] = useState("");
   const [whatsappInput, setWhatsappInput] = useState("");
+  const [referidoInput, setReferidoInput] = useState(""); // <-- NUEVA MEMORIA
   const [isActualizando, setIsActualizando] = useState(false);
 
   useEffect(() => {
@@ -41,10 +42,17 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
   const guardarPerfil = async () => {
     if (!nombreInput || !whatsappInput) return alert("Ingresa tu nombre y WhatsApp.");
     setIsActualizando(true);
-    const { error } = await supabase.from("perfiles").update({ nombre: nombreInput, whatsapp: whatsappInput }).eq("id", perfil.id);
+    
+    // Mandamos el referido. Si está vacío, mandamos null para no ensuciar la base de datos.
+    const { error } = await supabase.from("perfiles").update({ 
+      nombre: nombreInput, 
+      whatsapp: whatsappInput,
+      referido_por: referidoInput || null 
+    }).eq("id", perfil.id);
+    
     setIsActualizando(false);
     if (error) alert("Error al guardar tus datos.");
-    else onActualizarPerfil({ ...perfil, nombre: nombreInput, whatsapp: whatsappInput });
+    else onActualizarPerfil({ ...perfil, nombre: nombreInput, whatsapp: whatsappInput, referido_por: referidoInput });
   };
 
   const confirmarReserva = async () => {
@@ -123,6 +131,12 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
               <div>
                 <label className="block text-[10px] md:text-xs uppercase tracking-widest text-muted-foreground mb-1">WhatsApp</label>
                 <input type="tel" value={whatsappInput} onChange={(e) => setWhatsappInput(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary text-sm" placeholder="Ej. 81 1234 5678" />
+              </div>
+              <div>
+                <label className="block text-[10px] md:text-xs uppercase tracking-widest text-primary mb-1 flex items-center gap-1">
+                  WhatsApp de quien te invitó <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px]">Opcional 🎁</span>
+                </label>
+                <input type="tel" value={referidoInput} onChange={(e) => setReferidoInput(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary text-sm" placeholder="Si una amiga te invitó, pon su número aquí" />
               </div>
             </div>
             <button onClick={guardarPerfil} disabled={isActualizando} className="w-full bg-primary text-primary-foreground py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest cursor-pointer disabled:opacity-50 hover:opacity-90 transition-opacity">
