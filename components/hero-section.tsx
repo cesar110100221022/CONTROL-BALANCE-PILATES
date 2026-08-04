@@ -270,7 +270,7 @@ export function HeroSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[
             { nombre: "Clase Suelta", precio: 240,  },
-            { nombre: "8 Clases", precio: 1050,  },
+            { nombre: "8 Clases", precio: 1200,  },
             { nombre: "12 Clases", precio: 1680,  },
             { nombre: "16 Clases", precio: 2160,  },
             { nombre: "20 Clases", precio: 2640, },
