@@ -93,6 +93,7 @@ const finanzas = calcularFinanzasExactas();
 // Memorias para los buscadores
 const [busquedaCliente, setBusquedaCliente] = useState("");
 const [busquedaReserva, setBusquedaReserva] = useState("");
+const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGREGAR ESTO
   const router = useRouter();
 
   useEffect(() => {
@@ -150,7 +151,9 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
   };
 // --- INICIO: SISTEMA DE REFERIDOS ---
 const premiarReferido = async (whatsappReferente: string, clientaId: string, nombreClienta: string) => {
-  if (!confirm(`¿Deseas regalarle 1 crédito al número ${whatsappReferente} por haber invitado a ${nombreClienta}?`)) return;
+  const mensajeAntifraude = `🚨 ALTO: PREVENCIÓN DE FRAUDE 🚨\n\n¿Estás 100% segura de que ${nombreClienta} ya PAGÓ su primer paquete de clases?\n\n⚠️ REGLA: NUNCA des este premio si la persona solo vino a su clase de prueba gratis o si aún no hace la transferencia.\n\nSi ya tienes el dinero en tu cuenta, haz clic en Aceptar para darle 1 clase gratis a su amiga.`;
+  
+  if (!confirm(mensajeAntifraude)) return;
 
   setIsLoading(true);
   try {
@@ -460,11 +463,17 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
     else alert("Todos los horarios fijos ya estaban cargados. No se duplicó nada.");
   };
 // --- INICIO: LÓGICA DE BUSCADORES Y LIMPIEZA VISUAL ---
-  // 1. Filtrar Clientas por nombre o WhatsApp
-  const clientesFiltrados = clientes.filter(c => 
-    (c.nombre || "").toLowerCase().includes(busquedaCliente.toLowerCase()) || 
-    (c.whatsapp || "").includes(busquedaCliente)
-  );
+  // 1. Filtrar Clientas por nombre, WhatsApp y Filtro de 0 Créditos
+  const clientesFiltrados = clientes.filter(c => {
+    const coincideBusqueda = (c.nombre || "").toLowerCase().includes(busquedaCliente.toLowerCase()) || 
+                             (c.whatsapp || "").includes(busquedaCliente);
+    
+    // Si el filtro está activo, solo mostramos las que tienen 0 créditos
+    const creditosActuales = c.creditos || 0;
+    const coincideFiltro = filtroCeroCreditos ? creditosActuales <= 0 : true;
+    
+    return coincideBusqueda && coincideFiltro;
+  });
 
   // 2. Limpieza y Búsqueda en Reservas
   const diasValidos = diasCalendario.map(d => d.id); // Solo los 7 días actuales
@@ -510,16 +519,24 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         {/* PESTAÑA 1 (CLIENTAS) */}
         {activeTab === "clientas" && (
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden animate-in fade-in duration-300">
-            {/* BUSCADOR DE CLIENTAS */}
-            <div className="p-4 border-b border-border bg-secondary/10 flex items-center">
-              <span className="text-xl mr-3">🔍</span>
-              <input 
-                type="text" 
-                placeholder="Buscar por nombre o número de WhatsApp..." 
-                value={busquedaCliente}
-                onChange={(e) => setBusquedaCliente(e.target.value)}
-                className="w-full bg-transparent border-none focus:outline-none text-foreground text-sm font-medium"
-              />
+            {/* BUSCADOR DE CLIENTAS Y FILTRO DE COBRANZA */}
+            <div className="p-4 border-b border-border bg-secondary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center w-full">
+                <span className="text-xl mr-3">🔍</span>
+                <input 
+                  type="text" 
+                  placeholder="Buscar por nombre o número..." 
+                  value={busquedaCliente}
+                  onChange={(e) => setBusquedaCliente(e.target.value)}
+                  className="w-full bg-transparent border-none focus:outline-none text-foreground text-sm font-medium"
+                />
+              </div>
+              <button 
+                onClick={() => setFiltroCeroCreditos(!filtroCeroCreditos)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer border ${filtroCeroCreditos ? 'bg-red-100 text-red-700 border-red-200' : 'bg-card text-muted-foreground border-border hover:bg-secondary/50'}`}
+              >
+                {filtroCeroCreditos ? "🚨 Mostrando 0 Créditos" : "⚠️ Filtrar 0 Créditos"}
+              </button>
             </div>
 
             <table className="w-full text-left border-collapse">
@@ -543,9 +560,14 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                         <span className="bg-amber-100 text-amber-800 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded border border-amber-200">
                           🎁 Invitada por: {cliente.referido_por}
                         </span>
-                        <button onClick={() => premiarReferido(cliente.referido_por, cliente.id, cliente.nombre)} className="bg-amber-500 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded hover:bg-amber-600 transition-colors cursor-pointer shadow-sm">
-                          Dar Premio
-                        </button>
+                        <div className="flex flex-col items-center gap-1">
+                          <button onClick={() => premiarReferido(cliente.referido_por, cliente.id, cliente.nombre)} className="bg-amber-500 text-white text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded hover:bg-amber-600 transition-colors cursor-pointer shadow-sm">
+                            ✅ Aprobar Premio
+                          </button>
+                          <span className="text-[8px] uppercase tracking-widest text-muted-foreground text-center">
+                            *Cobra antes de premiar
+                          </span>
+                        </div>
                       </div>
                     )}
                     {cliente.referido_por?.includes("PREMIADO") && (
@@ -610,9 +632,39 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                       <p className="text-xs text-muted-foreground mt-1 tracking-wider">WA: {reserva.whatsapp}</p>
                     </td>
                     <td className="p-5">
-                      <span className="inline-block px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-medium">
-                        {obtenerInfoClase(reserva.clase_id)}
-                      </span>
+                      {(() => {
+                        const claseAsignada = clases.find(c => String(c.id) === String(reserva.clase_id));
+                        
+                        // Formateador seguro de fecha (Evita saltos de zona horaria)
+                        let fechaFormateada = "Día pendiente";
+                        if (claseAsignada?.dia) {
+                          const [year, month, day] = claseAsignada.dia.split('-');
+                          const fechaObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                          fechaFormateada = fechaObj.toLocaleDateString('es-MX', { 
+                            weekday: 'long', 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric' 
+                          });
+                        }
+                        
+                        return (
+                          <div className="flex flex-col gap-1.5">
+                            <span className="font-serif font-bold text-slate-800 text-sm md:text-base">
+                              {claseAsignada?.nombre || "Clase Eliminada/No encontrada"}
+                            </span>
+                            
+                            <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs">
+                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium border border-amber-200 shadow-sm capitalize">
+                                📅 {fechaFormateada}
+                              </span>
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-medium border border-primary/20 shadow-sm">
+                                ⏰ {claseAsignada?.horario || "Horario pendiente"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-5 text-right text-sm text-muted-foreground font-light">
                       {new Date(reserva.fecha_reserva).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { supabase } from "../lib/supabase"; 
 import { useRouter } from "next/navigation";
 import { ModalReserva } from "./modal-reserva";
@@ -17,7 +17,8 @@ interface Clase {
 export function HeroSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  
+  // AGREGAR ESTO: Estado para controlar el menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [clasesDisponibles, setClasesDisponibles] = useState<Clase[]>([]);
   const [reservasActivas, setReservasActivas] = useState<any[]>([]);
   
@@ -211,7 +212,46 @@ export function HeroSection() {
             </button>
           )}
         </nav>
+
+        {/* AGREGAR ESTO: BOTÓN HAMBURGUESA SOLO PARA CELULAR */}
+        <button 
+          className="md:hidden text-foreground p-2 z-50 transition-transform active:scale-95 cursor-pointer"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Abrir menú"
+        >
+          {isMobileMenuOpen ? <X size={32} /> : <Menu size={32} />}
+        </button>
       </header>
+
+      {/* AGREGAR ESTO: PANEL DESPLEGABLE CELULAR */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-[80px] left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-xl border-b border-border shadow-xl animate-in slide-in-from-top-2">
+          <div className="flex flex-col px-6 py-8 gap-6">
+            <a href="#metodo" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Método</a>
+            <a href="#estudio" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Estudio</a>
+            
+            <div className="pt-2">
+              {perfil ? (
+                (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
+                  <button onClick={() => router.push("/admin")} className="flex w-full items-center justify-between bg-amber-600/10 p-4 rounded-xl border border-amber-600/20 text-amber-700">
+                    <span className="font-medium text-lg">Panel de Control 👑</span>
+                    <ArrowRight size={20} />
+                  </button>
+                ) : (
+                  <button onClick={() => router.push("/dashboard")} className="flex w-full items-center justify-between bg-primary text-primary-foreground p-4 rounded-xl shadow-lg">
+                    <span className="font-medium text-lg tracking-wide">Mi Perfil ({perfil.creditos} créditos)</span>
+                    <ArrowRight size={20} />
+                  </button>
+                )
+              ) : (
+                <button onClick={() => router.push("/login")} className="flex w-full items-center justify-center bg-primary text-primary-foreground p-4 rounded-xl shadow-lg font-medium text-lg tracking-wide uppercase">
+                  Iniciar Sesión
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TEXTO PRINCIPAL - DISEÑO ELEGANTE Y COMPACTO */}
       <div className="relative z-10 mx-auto flex min-h-[50vh] md:min-h-[65vh] max-w-[1400px] flex-col justify-center px-6 pb-8 pt-4 md:pb-16 md:px-12">
