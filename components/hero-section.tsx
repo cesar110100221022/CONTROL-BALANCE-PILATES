@@ -302,7 +302,7 @@ export function HeroSection() {
             </svg>
           </div>
           <p className="font-light leading-relaxed">
-            <strong className="font-medium">¿Cómo adquiero o recargo un paquete?</strong> La solicitud de paquetes se realiza mediante <a href="https://wa.me/528132624421?text=Hola%20Liliana,%20me%20gustar%C3%ADa%20adquirir%20un%20paquete%20de%20clases" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline cursor-pointer">WhatsApp</a>. Podrás realizar tu pago por transferencia bancaria, o bien, pagar directamente en el estudio.
+            <strong className="font-medium">¿Cómo adquiero o recargo un paquete?</strong> La solicitud de paquetes se realiza mediante <a href="https://wa.me/528124697382?text=Hola%20Liliana,%20me%20gustar%C3%ADa%20adquirir%20un%20paquete%20de%20clases" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline cursor-pointer">WhatsApp</a>. Podrás realizar tu pago por transferencia bancaria, o bien, pagar directamente en el estudio.
           </p>
         </div>
         {/* --- FIN: BANNER AVISO DE PAGO --- */}

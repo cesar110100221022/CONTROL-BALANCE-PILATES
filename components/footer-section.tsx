@@ -65,7 +65,7 @@ export function Footer() {
 
       {/* --- INICIO: BOTÓN FLOTANTE WHATSAPP --- */}
       <a 
-        href="https://wa.me/528132624421?text=Hola%20Liliana,%20tengo%20una%20duda%20sobre%20las%20clases%20de%20Pilates" 
+        href="https://wa.me/528124697382?text=Hola%20Liliana,%20tengo%20una%20duda%20sobre%20las%20clases%20de%20Pilates" 
         target="_blank" 
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-[99999] bg-[#25D366] text-white p-4 rounded-full shadow-[0_10px_40px_-10px_rgba(37,211,102,0.8)] hover:scale-110 transition-transform duration-300 flex items-center justify-center cursor-pointer"

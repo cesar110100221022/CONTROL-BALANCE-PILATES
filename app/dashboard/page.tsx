@@ -136,7 +136,7 @@ export default function DashboardClienta() {
                 <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Créditos Disponibles</p>
                 <span className="text-7xl font-serif text-primary">{perfil?.creditos || 0}</span>
                 {perfil?.creditos <= 0 && (
-                  <button onClick={() => window.open("https://wa.me/528132624421", "_blank")} className="w-full mt-6 bg-primary text-white py-3 rounded-lg text-xs uppercase tracking-widest font-bold hover:bg-primary/90 transition-colors cursor-pointer">
+                  <button onClick={() => window.open("https://wa.me/528124697382", "_blank")} className="w-full mt-6 bg-primary text-white py-3 rounded-lg text-xs uppercase tracking-widest font-bold hover:bg-primary/90 transition-colors cursor-pointer">
                     Recargar Paquete
                   </button>
                 )}
