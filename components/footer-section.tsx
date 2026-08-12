@@ -21,7 +21,7 @@ export function Footer() {
           {/* 2. Contacto y Ubicación + MAPA */}
           <div className="flex flex-col items-center md:items-start text-sm text-muted-foreground font-light space-y-3 w-full">
             <p>📍 Calz. Mauricio Fernández Garza 217, Del Valle, 66220 San Pedro Garza García, N.L.</p>
-            <p>📞 +52 81 3262 4421</p>
+            <p>📞 +52 81 2469 7382</p>
             
             <div className="w-full h-32 md:h-40 rounded-lg overflow-hidden border border-border shadow-sm">
               <iframe
