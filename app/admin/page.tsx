@@ -270,6 +270,7 @@ const quitarDeLista = async (id: string) => {
 // --- FIN: GESTOR DE LISTA DE ESPERA ---
 // --- INICIO: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
 const [cumpleañerasMes, setCumpleañerasMes] = useState<any[]>([]);
+const [isCumpleañosModalOpen, setIsCumpleañosModalOpen] = useState(false); // <-- NUEVO ESTADO PARA LA VENTANA
 const [estadisticas, setEstadisticas] = useState({
   totalClientas: 0,
   clasesHoy: 0,
@@ -766,8 +767,11 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               <p className="text-3xl font-serif text-foreground mt-1">{estadisticas.clasesHoy}</p>
             </div>
           </div>
-          {/* Tarjeta 4: Cumpleaños del Mes (NUEVA) */}
-          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+         {/* Tarjeta 4: Cumpleaños del Mes (NUEVA) */}
+         <div 
+            onClick={() => setIsCumpleañosModalOpen(true)}
+            className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-all hover:-translate-y-1 cursor-pointer hover:shadow-md border-pink-100/50 hover:border-pink-300"
+          >
             <div className="w-14 h-14 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 text-2xl shadow-inner">
               🎂
             </div>
@@ -1452,6 +1456,51 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         </div>
       )}
       {/* --- FIN: MODAL LISTA DE ESPERA --- */}
+      {/* --- INICIO: MODAL DE CUMPLEAÑOS --- */}
+      {isCumpleañosModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="bg-pink-500/10 p-5 border-b border-pink-500/20 flex justify-between items-center">
+              <div>
+                <h3 className="font-serif text-xl text-pink-700">Cumpleaños del Mes</h3>
+                <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest">Atletas a felicitar</p>
+              </div>
+              <button onClick={() => setIsCumpleañosModalOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {cumpleañerasMes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                  <p className="text-2xl mb-2">🎂</p>
+                  <p className="text-sm">No hay cumpleaños registrados este mes.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cumpleañerasMes.map((persona, index) => {
+                    // Extraemos solo el día de nacimiento de "YYYY-MM-DD"
+                    const dia = persona.fecha_nacimiento.split('-')[2];
+                    const mensajeWA = `¡Hola ${persona.nombre.split(' ')[0]}! 🎂✨ De parte de Control Balance te deseamos un muy feliz cumpleaños. Que este nuevo año esté lleno de salud, movimiento y cosas hermosas. ¡Te mandamos un abrazo grande!`;
+                    const linkWA = `https://wa.me/${(persona.whatsapp || "").replace(/\D/g, '')}?text=${encodeURIComponent(mensajeWA)}`;
+
+                    return (
+                      <div key={index} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 p-4 bg-secondary/20 border border-border rounded-lg">
+                        <div>
+                          <span className="font-medium text-sm text-foreground">{persona.nombre}</span>
+                          <span className="block text-xs text-muted-foreground mt-0.5">Día del mes: <span className="font-bold text-pink-600">{dia}</span></span>
+                        </div>
+                        <a href={linkWA} target="_blank" rel="noreferrer" className="text-center bg-[#25D366] text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2">
+                          💬 Felicitar
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- FIN: MODAL DE CUMPLEAÑOS --- */}
     </main>
   );
 }
