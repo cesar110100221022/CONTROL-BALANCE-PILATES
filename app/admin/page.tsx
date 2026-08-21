@@ -237,7 +237,37 @@ const ejecutarConcierge = async (e: React.FormEvent) => {
   }
 };
 // --- FIN: BOTÓN CONCIERGE ---
+// --- INICIO: GESTOR DE LISTA DE ESPERA ---
+const [isListaEsperaOpen, setIsListaEsperaOpen] = useState(false);
+const [personasEnEspera, setPersonasEnEspera] = useState<any[]>([]);
+const [claseEsperaInfo, setClaseEsperaInfo] = useState<any>(null);
 
+const abrirListaEspera = async (clase: any) => {
+  setIsLoading(true);
+  try {
+    // Buscamos quién está formado para esta clase específica
+    const { data, error } = await supabase.from("lista_espera").select("*").eq("clase_id", clase.id).order("created_at", { ascending: true });
+    if (error) throw error;
+    
+    setPersonasEnEspera(data || []);
+    setClaseEsperaInfo(clase);
+    setIsListaEsperaOpen(true);
+  } catch (error) {
+    alert("Error al cargar la lista de espera.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const quitarDeLista = async (id: string) => {
+  try {
+    await supabase.from("lista_espera").delete().eq("id", id);
+    setPersonasEnEspera(personasEnEspera.filter(p => p.id !== id));
+  } catch (error) {
+    console.error("Error al borrar de la lista");
+  }
+};
+// --- FIN: GESTOR DE LISTA DE ESPERA ---
   useEffect(() => {
     cargarDatosGenerales();
   }, []);
@@ -970,6 +1000,12 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                             </div>
                             <div className="flex flex-col gap-2 items-end">
                               <button 
+                                onClick={() => abrirListaEspera(clase)} 
+                                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                              >
+                                📢 Ver Fila de Espera
+                              </button>
+                              <button 
                                 onClick={() => { setClaseConciergeId(clase.id); setIsConciergeOpen(true); }} 
                                 className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
                               >
@@ -1255,7 +1291,63 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         </div>
       )}
       {/* --- FIN: MODAL CONCIERGE --- */}
-      
+      {/* --- INICIO: MODAL LISTA DE ESPERA --- */}
+      {isListaEsperaOpen && claseEsperaInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="bg-emerald-600/10 p-5 border-b border-emerald-600/20 flex justify-between items-center">
+              <div>
+                <h3 className="font-serif text-xl text-emerald-800">Fila de Espera</h3>
+                <p className="text-xs text-emerald-700/80 mt-1 font-bold uppercase tracking-widest">
+                  📅 {claseEsperaInfo.dia} • {claseEsperaInfo.horario}
+                </p>
+              </div>
+              <button onClick={() => setIsListaEsperaOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {personasEnEspera.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                  <p className="text-2xl mb-2">🍃</p>
+                  <p className="text-sm">Nadie está en espera para esta clase.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                    Estas personas se formaron al ver la clase llena. El orden de arriba hacia abajo es como fueron llegando.
+                  </p>
+                  {personasEnEspera.map((persona, index) => {
+                    // AQUÍ AGREGAMOS EL DÍA EXACTO AL MENSAJE DE WHATSAPP
+                    const mensajeWA = `¡Hola ${persona.nombre.split(' ')[0]}! Te escribo de Control Balance. Se acaba de liberar un lugar para la clase del *${claseEsperaInfo.dia}* a las *${claseEsperaInfo.horario}*. ¿Te anoto para apartarlo?`;
+                    const linkWA = `https://wa.me/${(persona.whatsapp || "").replace(/\D/g, '')}?text=${encodeURIComponent(mensajeWA)}`;
+
+                    return (
+                      <div key={persona.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 p-4 bg-secondary/20 border border-border rounded-lg">
+                        <div>
+                          <span className="inline-block bg-primary text-primary-foreground w-5 h-5 rounded-full text-[10px] text-center leading-5 font-bold mr-2 shadow-sm">
+                            {index + 1}
+                          </span>
+                          <span className="font-medium text-sm">{persona.nombre}</span>
+                          <span className="block ml-7 text-xs text-muted-foreground">{persona.whatsapp}</span>
+                        </div>
+                        <div className="flex gap-2 ml-7 sm:ml-0">
+                          <a href={linkWA} target="_blank" rel="noreferrer" className="flex-1 sm:flex-none text-center bg-[#25D366] text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
+                            💬 Avisar
+                          </a>
+                          <button onClick={() => quitarDeLista(persona.id)} className="px-3 py-1.5 border border-border text-muted-foreground hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer title='Quitar de la lista'">
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- FIN: MODAL LISTA DE ESPERA --- */}
     </main>
   );
 }

@@ -256,7 +256,7 @@ export function HeroSection() {
       {/* TEXTO PRINCIPAL - DISEÑO ELEGANTE Y COMPACTO */}
       <div className="relative z-10 mx-auto flex min-h-[50vh] md:min-h-[65vh] max-w-[1400px] flex-col justify-center px-6 pb-8 pt-4 md:pb-16 md:px-12">
         <p className="animate-rise mb-3 md:mb-6 flex items-center gap-3 text-xs md:text-sm font-bold uppercase tracking-[0.15em] md:tracking-[0.25em] text-foreground/90 drop-shadow-sm [animation-delay:0.1s]">
-          Estudio Boutique de Pilates
+          ESTUDIO PILATES REFORMER
         </p>
 
         {/* Letras con más cuerpo (font-medium) y sombra (drop-shadow) para que no se pierdan con el fondo */}

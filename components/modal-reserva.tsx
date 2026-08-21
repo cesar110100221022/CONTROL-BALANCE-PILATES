@@ -121,7 +121,7 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
         <button onClick={onClose} className="absolute top-4 right-5 text-muted-foreground hover:text-foreground text-2xl font-bold cursor-pointer">✕</button>
         {(!perfil.nombre || !perfil.whatsapp) ? (
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-serif font-light mb-4 mt-4">Ya casi estás lista</h2>
+            <h2 className="text-2xl md:text-3xl font-serif font-light mb-4 mt-4">Solo falta un paso</h2>
             <p className="text-xs md:text-sm text-muted-foreground mb-6">Completa estos 2 datos para continuar.</p>
             <div className="space-y-4 text-left mb-6">
               <div>
@@ -136,7 +136,7 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
                 <label className="block text-[10px] md:text-xs uppercase tracking-widest text-primary mb-1 flex items-center gap-1">
                   WhatsApp de quien te invitó <span className="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px]">Opcional 🎁</span>
                 </label>
-                <input type="tel" value={referidoInput} onChange={(e) => setReferidoInput(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary text-sm" placeholder="Si una amiga te invitó, pon su número aquí" />
+                <input type="tel" value={referidoInput} onChange={(e) => setReferidoInput(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary text-sm" placeholder="Si alguien te invitó, pon su número aquí" />
               </div>
             </div>
             <button onClick={guardarPerfil} disabled={isActualizando} className="w-full bg-primary text-primary-foreground py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest cursor-pointer disabled:opacity-50 hover:opacity-90 transition-opacity">
@@ -194,8 +194,18 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
                 );
               }
 
+              // --- INICIO: INTERCEPTOR DE VENTAS (0 CRÉDITOS) ---
+              if (claseSeleccionada && perfil.creditos <= 0) {
+                return (
+                  <button onClick={() => window.open("https://wa.me/528124697382?text=Hola%20Liliana,%20ya%20no%20tengo%20cr%C3%A9ditos%20en%20mi%20cuenta.%20Me%20gustar%C3%ADa%20comprar%20un%20paquete%20nuevo.", "_blank")} className="w-full bg-emerald-600 text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest transition-opacity hover:bg-emerald-700 cursor-pointer shadow-lg rounded-md">
+                    💬 Sin créditos: Comprar Paquete
+                  </button>
+                );
+              }
+              // --- FIN: INTERCEPTOR DE VENTAS ---
+
               return (
-                <button onClick={confirmarReserva} disabled={isSubmitting || perfil.creditos <= 0 || clasesDelDia.length === 0 || !claseSeleccionada} className="w-full bg-primary text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:opacity-90 cursor-pointer rounded-md">
+                <button onClick={confirmarReserva} disabled={isSubmitting || clasesDelDia.length === 0 || !claseSeleccionada} className="w-full bg-primary text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:opacity-90 cursor-pointer rounded-md">
                   {isSubmitting ? "Procesando..." : "Confirmar Reserva"}
                 </button>
               );

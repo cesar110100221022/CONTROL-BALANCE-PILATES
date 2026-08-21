@@ -32,6 +32,17 @@ export function StudioSection() {
             </p>
           </div>
         </div>
+        {/* --- INICIO: BOTÓN DE CIERRE DE VENTA --- */}
+        <div className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+          <a 
+            href="/login" 
+            className="inline-flex items-center justify-center gap-3 bg-primary text-primary-foreground px-8 py-4 rounded-full text-xs font-bold uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer"
+          >
+            Vivir la Experiencia
+            <span className="text-lg">→</span>
+          </a>
+        </div>
+        {/* --- FIN: BOTÓN DE CIERRE DE VENTA --- */}
       </div>
     </section>
   );

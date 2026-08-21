@@ -63,8 +63,8 @@ export default function DashboardClienta() {
     const devuelveCredito = horasFaltantes >= 12;
 
     const mensaje = devuelveCredito 
-      ? `¿Deseas cancelar tu clase de ${reserva.claseInfo.nombre}?\n\nAl cancelar con más de 12 horas de anticipación, tu crédito será devuelto a tu cuenta inmediatamente.` 
-      : `⚠️ PENALIZACIÓN POR TIEMPO ⚠️\n\nFaltan menos de 12 horas para tu clase. Si cancelas ahora, perderás tu lugar y NO se te devolverá el crédito.\n\n¿Estás segura de cancelar?`;
+    ? `¿Deseas cancelar tu clase de ${reserva.claseInfo.nombre}?\n\nAl cancelar con más de 12 horas de anticipación, tu crédito será devuelto a tu cuenta inmediatamente.` 
+    : `⚠️ PENALIZACIÓN POR TIEMPO ⚠️\n\nFaltan menos de 12 horas para tu clase. Si cancelas ahora, perderás tu lugar y NO se te devolverá el crédito.\n\n¿Confirmas que deseas cancelar?`;
 
     if (!window.confirm(mensaje)) return;
 
@@ -109,9 +109,9 @@ export default function DashboardClienta() {
       
       <div className="relative z-10 max-w-4xl mx-auto p-6 md:p-12 pt-20">
         <header className="flex justify-between items-end mb-12 border-b border-border/30 pb-6">
-          <div>
+        <div>
             <p className="text-xs uppercase tracking-widest text-primary mb-2 font-bold">Mi Espacio</p>
-            <h1 className="font-serif text-4xl text-foreground">Hola, {perfil?.nombre?.split(' ')[0] || "Clienta"}</h1>
+            <h1 className="font-serif text-4xl text-foreground">Hola, {perfil?.nombre?.split(' ')[0] || "Atleta"}</h1>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-4">
           <button onClick={() => setIsModalOpen(true)} className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer shadow-sm">
