@@ -323,8 +323,10 @@ setCumpleañerasMes(cumpleañeras);
 // Hacemos que se calcule automáticamente al abrir la página
 useEffect(() => {
   cargarEstadisticas();
+
 }, []);
 // --- FIN: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
+
   useEffect(() => {
     cargarDatosGenerales();
   }, []);
@@ -1501,6 +1503,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         </div>
       )}
       {/* --- FIN: MODAL DE CUMPLEAÑOS --- */}
+      
     </main>
   );
 }
