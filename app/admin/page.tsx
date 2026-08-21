@@ -96,6 +96,75 @@ const [busquedaReserva, setBusquedaReserva] = useState("");
 const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGREGAR ESTO
   const router = useRouter();
 
+  // --- INICIO: MÓDULO FINANCIERO (ESTADOS Y FUNCIÓN) ---
+  const [isVentaModalOpen, setIsVentaModalOpen] = useState(false);
+  const [clienteVenta, setClienteVenta] = useState<any>(null);
+  const [paqueteSeleccionado, setPaqueteSeleccionado] = useState(PAQUETES[1]); // Por defecto Paquete de 8
+  const [metodoPago, setMetodoPago] = useState("Transferencia");
+  const [estatusPago, setEstatusPago] = useState("Pagado");
+  const [isProcesandoVenta, setIsProcesandoVenta] = useState(false);
+  const [deudas, setDeudas] = useState<any[]>([]); // MEMORIA DE DEUDAS
+
+  const saldarDeuda = async (deudaId: string, nombre: string) => {
+    if (!confirm(`¿Confirmas que ${nombre} ya te transfirió/pagó el paquete?`)) return;
+    setIsLoading(true);
+    try {
+      await supabase.from("transacciones").update({ estatus_pago: "Pagado" }).eq("id", deudaId);
+      setDeudas(deudas.filter(d => d.id !== deudaId));
+      alert("¡Deuda saldada con éxito! El dinero ya está en la cuenta.");
+    } catch (error) {
+      alert("Error al actualizar el pago.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const procesarVenta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clienteVenta) return;
+    setIsProcesandoVenta(true);
+
+    try {
+      // 1. Guardar el recibo exacto en la bóveda (Con .select() para guardarlo en memoria)
+      const { data: nuevaTx, error: errorTx } = await supabase.from("transacciones").insert([{
+        cliente_nombre: clienteVenta.nombre || "Sin nombre",
+        cliente_whatsapp: clienteVenta.whatsapp || "Sin número",
+        paquete_comprado: paqueteSeleccionado.nombre,
+        monto_mxn: paqueteSeleccionado.precio,
+        metodo_pago: metodoPago,
+        estatus_pago: estatusPago
+      }]).select();
+
+      if (errorTx) throw errorTx;
+
+      // 1.5 Si vendió fiado, se agrega a la lista de deudas al instante
+      if (estatusPago === "Pendiente" && nuevaTx) {
+        setDeudas(prev => [...prev, nuevaTx[0]]);
+      }
+
+      // 2. Sumarle los créditos automáticamente
+      const nuevosCreditos = (clienteVenta.creditos || 0) + paqueteSeleccionado.clases;
+      const { error: errorCreditos } = await supabase
+        .from("perfiles")
+        .update({ creditos: nuevosCreditos })
+        .eq("id", clienteVenta.id);
+
+      if (errorCreditos) throw errorCreditos;
+
+      // 3. Actualizar la pantalla sin recargar la página
+      setClientes(clientes.map(c => c.id === clienteVenta.id ? { ...c, creditos: nuevosCreditos } : c));
+      
+      alert(`✅ ¡Venta registrada exitosamente!\nSe sumaron ${paqueteSeleccionado.clases} créditos a ${clienteVenta.nombre}.`);
+      setIsVentaModalOpen(false);
+    } catch (error) {
+      console.error("Error en la venta:", error);
+      alert("Hubo un error al procesar la venta. Revisa la conexión.");
+    } finally {
+      setIsProcesandoVenta(false);
+    }
+  };
+  // --- FIN: MÓDULO FINANCIERO ---
+
   useEffect(() => {
     cargarDatosGenerales();
   }, []);
@@ -134,6 +203,10 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
 
     const { data: dataReservas } = await supabase.from("reservas").select("*").order("fecha_reserva", { ascending: false });
     if (dataReservas) setReservas(dataReservas);
+
+    // BÚSQUEDA DE DEUDORAS FINANCIERAS
+    const { data: dataDeudas } = await supabase.from("transacciones").select("*").eq("estatus_pago", "Pendiente");
+    if (dataDeudas) setDeudas(dataDeudas);
 
     setIsLoading(false);
   };
@@ -513,6 +586,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
           </button>
           <button onClick={() => setActiveTab("finanzas")} className={`px-6 py-4 text-sm uppercase tracking-widest font-medium transition-colors whitespace-nowrap cursor-pointer ${activeTab === "finanzas" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             Finanzas 💰
+            
           </button>
         </div>
 
@@ -548,11 +622,50 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                 </tr>
               </thead>
               <tbody>
-                {clientesFiltrados.map((cliente) => (
+                {clientesFiltrados.map((cliente) => {
+                  // --- INICIO: LÓGICA DE DETECCIÓN AISLADA ---
+                  const totalReservasHistoricas = reservas.filter(r => r.whatsapp === cliente.whatsapp).length;
+                  const esTotalmenteNueva = (cliente.creditos || 0) === 0 && totalReservasHistoricas === 0;
+                  // --- FIN: LÓGICA ---
+
+                  return (
                   <tr key={cliente.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
                   <td className="p-5">
                     <p className="font-medium text-lg">{cliente.nombre || "Sin nombre"}</p>
                     <p className="text-xs text-muted-foreground mt-1 tracking-wider">{cliente.whatsapp || "Registrada por email"}</p>
+                    
+                    {/* ETIQUETA VISUAL DE CLASE DE PRUEBA */}
+                    {esTotalmenteNueva && (
+                      <span className="inline-block mt-2 bg-emerald-100 text-emerald-800 text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded border border-emerald-200 shadow-sm">
+                        🌱 Nueva: Dar Clase de Prueba
+                      </span>
+                    )}
+
+                    {/* --- INICIO: CONTROL DE DEUDORAS --- */}
+                    {(() => {
+                      const deuda = deudas.find(d => d.cliente_whatsapp === cliente.whatsapp);
+                      if (!deuda) return null;
+                      
+                      const mensajeCobro = `¡Hola ${cliente.nombre}! Te escribo de Control Balance para recordarte amablemente que tienes un pago pendiente de $${deuda.monto_mxn} por tu ${deuda.paquete_comprado}. Cuando te sea posible, ¿me apoyarías con el comprobante? ¡Mil gracias!`;
+                      const linkWA = `https://wa.me/${(cliente.whatsapp || "").replace(/\D/g, '')}?text=${encodeURIComponent(mensajeCobro)}`;
+
+                      return (
+                        <div className="mt-3 flex flex-col items-start gap-2 bg-red-50 p-2.5 rounded border border-red-200 shadow-sm">
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-red-700">
+                            🚨 ADEUDO: ${deuda.monto_mxn} ({deuda.paquete_comprado})
+                          </span>
+                          <div className="flex gap-2">
+                            <a href={linkWA} target="_blank" rel="noreferrer" className="bg-[#25D366] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
+                              💬 Cobrar x WA
+                            </a>
+                            <button onClick={() => saldarDeuda(deuda.id, cliente.nombre)} className="bg-white text-red-600 border border-red-200 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors shadow-sm cursor-pointer">
+                              ✅ Marcar Pagado
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {/* --- FIN: CONTROL DE DEUDORAS --- */}
                     
                     {/* --- AVISO DE REFERIDO --- */}
                     {cliente.referido_por && !cliente.referido_por.includes("PREMIADO") && (
@@ -580,17 +693,30 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   </td>
                   <td className="p-5 text-center"><span className="text-3xl font-serif text-primary">{cliente.creditos || 0}</span></td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, -1)} className="w-10 h-10 flex items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-xl cursor-pointer">-</button>
-                        <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, 1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-xl cursor-pointer">+</button>
+                      <div className="flex justify-end items-center gap-2">
+                        {/* BOTÓN PRINCIPAL DE VENTAS */}
+                        <button 
+                          onClick={() => { setClienteVenta(cliente); setIsVentaModalOpen(true); }}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                        >
+                          💰 Vender
+                        </button>
+                        
+                        {/* AJUSTE MANUAL SECUNDARIO */}
+                        <div className="flex bg-secondary/20 rounded border border-border">
+                          <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, -1)} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-lg cursor-pointer" title="Restar crédito manual">-</button>
+                          <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, 1)} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-lg cursor-pointer" title="Sumar crédito manual">+</button>
+                          </div>
                       </div>
                     </td>
                   </tr>
-                ))}
-                {clientesFiltrados.length === 0 && (
-                  <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">No se encontraron clientas con esa búsqueda.</td></tr>
-                )}
-              </tbody>
+                );
+              })}
+              
+              {clientesFiltrados.length === 0 && (
+                <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">No se encontraron clientas con esa búsqueda.</td></tr>
+              )}
+            </tbody>
             </table>
           </div>
         )}
@@ -922,9 +1048,73 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               </div>
             </div>
             
-          </div>
+            </div>
         )}
       </div>
+
+      {/* --- INICIO: MODAL DE VENTAS --- */}
+      {isVentaModalOpen && clienteVenta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden">
+            
+            <div className="bg-secondary/30 p-5 border-b border-border flex justify-between items-center">
+              <h3 className="font-serif text-xl">Vender a <span className="text-primary italic">{clienteVenta.nombre}</span></h3>
+              <button onClick={() => setIsVentaModalOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
+            </div>
+            
+            <form onSubmit={procesarVenta} className="p-6 space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">Paquete a vender</label>
+                <select 
+                  className="w-full border border-border rounded-lg bg-background p-3 text-sm focus:outline-none focus:border-primary"
+                  onChange={(e) => setPaqueteSeleccionado(PAQUETES.find(p => p.id === parseInt(e.target.value)) || PAQUETES[1])}
+                >
+                  {PAQUETES.map(p => (
+                    <option key={p.id} value={p.id}>{p.nombre} - ${p.precio.toLocaleString('es-MX')}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">Método de pago</label>
+                  <select 
+                    value={metodoPago}
+                    onChange={(e) => setMetodoPago(e.target.value)}
+                    className="w-full border border-border rounded-lg bg-background p-3 text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="TotalPass">TotalPass</option>
+                    <option value="Cortesía">Cortesía</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">Estatus</label>
+                  <select 
+                    value={estatusPago}
+                    onChange={(e) => setEstatusPago(e.target.value)}
+                    className={`w-full border rounded-lg bg-background p-3 text-sm focus:outline-none focus:border-primary font-bold ${estatusPago === "Pagado" ? "text-emerald-600 border-emerald-200" : "text-amber-600 border-amber-200"}`}
+                  >
+                    <option value="Pagado">✅ Pagado</option>
+                    <option value="Pendiente">⏳ Pendiente</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="pt-4 mt-6 border-t border-border flex justify-end gap-3">
+                <button type="button" onClick={() => setIsVentaModalOpen(false)} className="px-5 py-2.5 rounded text-xs uppercase tracking-widest font-medium text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">Cancelar</button>
+                <button type="submit" disabled={isProcesandoVenta} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
+                  {isProcesandoVenta ? "Guardando..." : "💰 Confirmar Venta"}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+      {/* --- FIN: MODAL DE VENTAS --- */}
+
     </main>
   );
 }
