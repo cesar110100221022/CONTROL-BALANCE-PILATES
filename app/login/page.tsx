@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState(""); 
+  const [fechaNacimiento, setFechaNacimiento] = useState(""); // <-- NUEVA MEMORIA
   const [showPassword, setShowPassword] = useState(false); // Memoria para ver/ocultar password
   const [isLoading, setIsLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
@@ -22,7 +23,7 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        // INICIO DE SESIÓN (La sesión se queda guardada automáticamente por Supabase)
+        // INICIO DE SESIÓN
         const { error } = await supabase.auth.signInWithPassword({ 
           email, 
           password 
@@ -33,14 +34,18 @@ export default function LoginPage() {
         router.push("/dashboard");
         
       } else {
-        // REGISTRO
+        // --- INICIO: REGISTRO DE NUEVA CUENTA ---
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { nombre } 
+            data: { 
+              nombre,
+              fecha_nacimiento: fechaNacimiento
+            } 
           }
         });
+
         if (error) throw error;
         
         if (data.session) {
@@ -49,6 +54,7 @@ export default function LoginPage() {
           setMensaje("¡Registro exitoso! Tu perfil ha sido creado. Ya puedes iniciar sesión.");
           setIsLogin(true); 
         }
+        // --- FIN: REGISTRO DE NUEVA CUENTA ---
       }
     } catch (error: any) {
       let errorAmigable = "Ocurrió un error. Verifica tus datos e intenta de nuevo.";
@@ -87,20 +93,32 @@ export default function LoginPage() {
 
         <form onSubmit={handleAuth} className="flex flex-col gap-5">
           
-          {!isLogin && (
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Nombre Completo</label>
-              <input 
-                type="text" 
-                required 
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary transition-colors text-sm" 
-                placeholder="Ej. Ana Sofía Garza"
-              />
-            </div>
-          )}
+        {!isLogin && (
+            <>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary transition-colors text-sm" 
+                  placeholder="Ej. Ana Sofía Garza"
+                />
+              </div>
 
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Fecha de Nacimiento</label>
+                <input 
+                  type="date" 
+                  required 
+                  value={fechaNacimiento}
+                  onChange={(e) => setFechaNacimiento(e.target.value)}
+                  className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-primary transition-colors text-sm cursor-pointer" 
+                />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Correo Electrónico</label>
             <input 

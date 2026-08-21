@@ -268,6 +268,62 @@ const quitarDeLista = async (id: string) => {
   }
 };
 // --- FIN: GESTOR DE LISTA DE ESPERA ---
+// --- INICIO: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
+const [cumpleañerasMes, setCumpleañerasMes] = useState<any[]>([]);
+const [estadisticas, setEstadisticas] = useState({
+  totalClientas: 0,
+  clasesHoy: 0,
+  ingresosMes: 0
+});
+
+const cargarEstadisticas = async () => {
+  try {
+    // 1. Contar clientas totales
+    const { count: countClientas } = await supabase
+      .from("perfiles")
+      .select("*", { count: "exact", head: true });
+
+    // 2. Contar clases programadas para HOY
+    const hoy = new Date().toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
+    const { count: countClases } = await supabase
+      .from("clases")
+      .select("*", { count: "exact", head: true })
+      .eq("dia", hoy);
+
+    // 3. Sumar ingresos del mes (Si tienes tabla de ventas)
+    // Nota: Si tu tabla se llama diferente, aquí lo ajustamos después.
+    const mesActual = hoy.substring(0, 7); // Extrae YYYY-MM
+    const { data: ventas } = await supabase
+      .from("ventas") // Asumiendo que así se llama la Bóveda Financiera
+      .select("monto")
+      .like("created_at", `${mesActual}%`);
+      
+    const totalIngresos = ventas?.reduce((acc, venta) => acc + (venta.monto || 0), 0) || 0;
+// 4. Buscar cumpleañeras del mes actual (Filtro seguro en JavaScript)
+const mesActualNumero = String(new Date().getMonth() + 1).padStart(2, '0');
+const { data: perfiles } = await supabase.from("perfiles").select("nombre, fecha_nacimiento, whatsapp");
+
+const cumpleañeras = (perfiles || []).filter(p => {
+  if (!p.fecha_nacimiento) return false;
+  const partesFecha = p.fecha_nacimiento.split('-'); // Divide YYYY-MM-DD
+  return partesFecha[1] === mesActualNumero; // Compara solo el mes
+});
+setCumpleañerasMes(cumpleañeras);
+    setEstadisticas({
+      totalClientas: countClientas || 0,
+      clasesHoy: countClases || 0,
+      ingresosMes: totalIngresos
+    });
+  } catch (error) {
+    console.error("Error al cargar estadísticas", error);
+  }
+};
+
+// Hacemos que se calcule automáticamente al abrir la página
+useEffect(() => {
+  cargarEstadisticas();
+}, []);
+// --- FIN: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
   useEffect(() => {
     cargarDatosGenerales();
   }, []);
@@ -675,6 +731,54 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             <p className="text-muted-foreground font-light text-sm mt-2">Control total del estudio Control Balance</p>
           </div>
         </header>
+        {/* --- INICIO: TARJETAS DE ESTADÍSTICAS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Tarjeta 1: Ingresos */}
+          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-2xl shadow-inner">
+              💰
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Ingresos del Mes</p>
+              <p className="text-3xl font-serif text-foreground mt-1">${estadisticas.ingresosMes.toLocaleString('es-MX')}</p>
+            </div>
+          </div>
+
+          {/* Tarjeta 2: Clientas */}
+          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl shadow-inner">
+              🧘‍♀️
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clientas Activas</p>
+              <p className="text-3xl font-serif text-foreground mt-1">{estadisticas.totalClientas}</p>
+            </div>
+          </div>
+
+          {/* Tarjeta 3: Operación de Hoy */}
+          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+            <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 text-2xl shadow-inner">
+              ☀️
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clases de Hoy</p>
+              <p className="text-3xl font-serif text-foreground mt-1">{estadisticas.clasesHoy}</p>
+            </div>
+          </div>
+          {/* Tarjeta 4: Cumpleaños del Mes (NUEVA) */}
+          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+            <div className="w-14 h-14 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 text-2xl shadow-inner">
+              🎂
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Cumpleaños del Mes</p>
+              <p className="text-3xl font-serif text-foreground mt-1">{cumpleañerasMes.length}</p>
+            </div>
+          </div>
+
+        </div>
+        {/* --- FIN: TARJETAS DE ESTADÍSTICAS --- */}
 
         {/* TABS */}
         <div className="flex border-b border-border mb-8 overflow-x-auto">
