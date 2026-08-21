@@ -164,6 +164,79 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
     }
   };
   // --- FIN: MÓDULO FINANCIERO ---
+// --- INICIO: BOTÓN CONCIERGE (AGENDAR MANUAL) ---
+const [isConciergeOpen, setIsConciergeOpen] = useState(false);
+const [claseConciergeId, setClaseConciergeId] = useState<string | null>(null);
+
+// Estados para Modo Existente
+const [clienteConciergeId, setClienteConciergeId] = useState("");
+
+// Estados para Modo Invitada
+const [tipoConcierge, setTipoConcierge] = useState("existente"); // "existente" | "nueva"
+const [nuevoNombreConcierge, setNuevoNombreConcierge] = useState("");
+const [nuevoWhatsappConcierge, setNuevoWhatsappConcierge] = useState("");
+
+const ejecutarConcierge = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!claseConciergeId) return;
+  setIsLoading(true);
+
+  try {
+    if (tipoConcierge === "existente") {
+      if (!clienteConciergeId) { setIsLoading(false); return; }
+      const clienta = clientes.find(c => c.id === clienteConciergeId);
+      if (!clienta) { setIsLoading(false); return; }
+
+      if ((clienta.creditos || 0) <= 0) {
+        const forzar = confirm(`⚠️ ${clienta.nombre} NO tiene créditos. ¿Deseas agendarla de todos modos y que su saldo quede en números rojos?`);
+        if (!forzar) { setIsLoading(false); return; }
+      }
+
+      const nuevosCreditos = (clienta.creditos || 0) - 1;
+      await supabase.from("perfiles").update({ creditos: nuevosCreditos }).eq("id", clienta.id);
+      
+      const { data: nuevaReserva, error } = await supabase.from("reservas").insert([{
+        nombre_cliente: clienta.nombre,
+        whatsapp: clienta.whatsapp,
+        clase_id: claseConciergeId
+      }]).select();
+
+      if (error) throw error;
+      setClientes(clientes.map(c => c.id === clienta.id ? { ...c, creditos: nuevosCreditos } : c));
+      if (nuevaReserva) setReservas([nuevaReserva[0], ...reservas]);
+      
+      alert(`🛎️ ¡Servicio VIP exitoso! ${clienta.nombre} fue agregada.`);
+    } else {
+      // MODO INVITADA (No tiene cuenta de créditos)
+      if (!nuevoNombreConcierge || !nuevoWhatsappConcierge) {
+        alert("Por favor llena el nombre y WhatsApp de la invitada.");
+        setIsLoading(false); return;
+      }
+
+      const { data: nuevaReserva, error } = await supabase.from("reservas").insert([{
+        nombre_cliente: nuevoNombreConcierge + " (Invitada)",
+        whatsapp: nuevoWhatsappConcierge,
+        clase_id: claseConciergeId
+      }]).select();
+
+      if (error) throw error;
+      if (nuevaReserva) setReservas([nuevaReserva[0], ...reservas]);
+      
+      alert(`🛎️ ¡Invitada registrada! ${nuevoNombreConcierge} ocupará la cama. (Recuerda cobrarle en el estudio o enviarle link de pago).`);
+    }
+
+    setIsConciergeOpen(false);
+    setClienteConciergeId("");
+    setNuevoNombreConcierge("");
+    setNuevoWhatsappConcierge("");
+    setTipoConcierge("existente");
+  } catch (error) {
+    alert("Error al agendar manualmente.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+// --- FIN: BOTÓN CONCIERGE ---
 
   useEffect(() => {
     cargarDatosGenerales();
@@ -590,8 +663,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
           </button>
         </div>
 
-        {/* PESTAÑA 1 (CLIENTAS) */}
-        {activeTab === "clientas" && (
+       {/* PESTAÑA 1 (CLIENTAS) */}
+       {activeTab === "clientas" && (
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden animate-in fade-in duration-300">
             {/* BUSCADOR DE CLIENTAS Y FILTRO DE COBRANZA */}
             <div className="p-4 border-b border-border bg-secondary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -605,12 +678,15 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   className="w-full bg-transparent border-none focus:outline-none text-foreground text-sm font-medium"
                 />
               </div>
-              <button 
-                onClick={() => setFiltroCeroCreditos(!filtroCeroCreditos)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer border ${filtroCeroCreditos ? 'bg-red-100 text-red-700 border-red-200' : 'bg-card text-muted-foreground border-border hover:bg-secondary/50'}`}
-              >
-                {filtroCeroCreditos ? "🚨 Mostrando 0 Créditos" : "⚠️ Filtrar 0 Créditos"}
-              </button>
+              <div className="flex gap-2 w-full sm:w-auto">
+
+                <button 
+                  onClick={() => setFiltroCeroCreditos(!filtroCeroCreditos)}
+                  className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer border ${filtroCeroCreditos ? 'bg-red-100 text-red-700 border-red-200' : 'bg-card text-muted-foreground border-border hover:bg-secondary/50'}`}
+                >
+                  {filtroCeroCreditos ? "🚨 0 Créditos" : "⚠️ 0 Créditos"}
+                </button>
+              </div>
             </div>
 
             <table className="w-full text-left border-collapse">
@@ -890,11 +966,19 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                                   {ocupadas} / {maxCamas} Camas ocupadas
                                 </span>
                                 {disponibles > 0 && <span className="text-xs text-muted-foreground">({disponibles} disponibles)</span>}
-                              </div>
+                                </div>
                             </div>
-                            <button onClick={() => eliminarClase(clase.id)} className="text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer px-3 py-2 border border-red-200 rounded transition-colors">
-                              Eliminar
-                            </button>
+                            <div className="flex flex-col gap-2 items-end">
+                              <button 
+                                onClick={() => { setClaseConciergeId(clase.id); setIsConciergeOpen(true); }} 
+                                className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                              >
+                                🛎️ Agendar VIP
+                              </button>
+                              <button onClick={() => eliminarClase(clase.id)} className="text-[10px] text-red-500 hover:text-red-700 hover:underline cursor-pointer px-2 py-1 border border-red-200/50 rounded transition-colors">
+                                Eliminar Clase
+                              </button>
+                            </div>
                           </div>
                           {reservasDeEstaClase.length > 0 && (
                             <div className="pt-4 border-t border-border">
@@ -1114,7 +1198,64 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         </div>
       )}
       {/* --- FIN: MODAL DE VENTAS --- */}
+{/* --- INICIO: MODAL CONCIERGE --- */}
+{isConciergeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden">
+            <div className="bg-amber-500/10 p-5 border-b border-amber-500/20 flex justify-between items-center">
+              <h3 className="font-serif text-xl text-amber-700">🛎️ Servicio Concierge VIP</h3>
+              <button onClick={() => setIsConciergeOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
+            </div>
+            <form onSubmit={ejecutarConcierge} className="p-6 space-y-5">
+              {/* TABS DE SELECCIÓN */}
+              <div className="flex bg-secondary/30 rounded-lg p-1 border border-border">
+                <button type="button" onClick={() => setTipoConcierge("existente")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer ${tipoConcierge === "existente" ? "bg-card shadow text-amber-700" : "text-muted-foreground hover:text-foreground"}`}>Ya es Clienta</button>
+                <button type="button" onClick={() => setTipoConcierge("nueva")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-colors cursor-pointer ${tipoConcierge === "nueva" ? "bg-card shadow text-amber-700" : "text-muted-foreground hover:text-foreground"}`}>Nueva (Invitada)</button>
+              </div>
 
+              {tipoConcierge === "existente" ? (
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">Selecciona a la Alumna</label>
+                  <select 
+                    value={clienteConciergeId}
+                    onChange={(e) => setClienteConciergeId(e.target.value)}
+                    className="w-full border border-border rounded-lg bg-background p-3 text-sm focus:outline-none focus:border-amber-500"
+                    required={tipoConcierge === "existente"}
+                  >
+                    <option value="">-- Buscar clienta en el sistema --</option>
+                    {clientes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre} ({c.creditos || 0} créditos)</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+                  <div className="bg-amber-500/10 p-3 rounded border border-amber-500/20 text-xs text-amber-700 mb-2 leading-relaxed">
+                    Agendarás a alguien que no usa la plataforma. Se apartará su cama, pero <b>no tendrá cuenta de créditos</b>. Deberás cobrarle manualmente.
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Nombre de la Invitada</label>
+                    <input type="text" value={nuevoNombreConcierge} onChange={e => setNuevoNombreConcierge(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-amber-500 text-sm" placeholder="Ej. Doña Carmen" required={tipoConcierge === "nueva"} />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">WhatsApp</label>
+                    <input type="text" value={nuevoWhatsappConcierge} onChange={e => setNuevoWhatsappConcierge(e.target.value)} className="w-full border-b border-border bg-transparent py-2 text-foreground focus:outline-none focus:border-amber-500 text-sm" placeholder="10 dígitos (Ej. 8100000000)" required={tipoConcierge === "nueva"} />
+                  </div>
+                </div>
+              )}
+              
+              <div className="pt-4 mt-6 border-t border-border flex justify-end gap-3">
+                <button type="button" onClick={() => setIsConciergeOpen(false)} className="px-5 py-2.5 rounded text-xs uppercase tracking-widest font-medium text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">Cancelar</button>
+                <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
+                  ✅ Apartar Cama
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* --- FIN: MODAL CONCIERGE --- */}
+      
     </main>
   );
 }
