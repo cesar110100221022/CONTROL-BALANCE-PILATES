@@ -20,31 +20,18 @@ export const metadata: Metadata = {
     'Respira. Conecta. Transforma. Un estudio boutique de Pilates Reformer donde el movimiento consciente se encuentra con el lujo silencioso.',
   generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: '/images/logo.PNG', // <-- Simplificado, forzamos a usar tu logo oficial
     apple: '/images/logo.PNG',
   },
   // AGREGAR ESTO: Metadatos Premium para WhatsApp, iMessage y Facebook
   openGraph: {
     title: 'Control Balance | Estudio de Pilates Reformer',
     description: 'Respira. Conecta. Transforma. Reserva tu clase en nuestro estudio boutique en Monterrey.',
-    url: 'https://control-balance-pilates.vercel.app/', // Aquí va el link real de tu página
+    url: 'https://controlbalancestudio.com/', // <-- Quitamos la doble diagonal extra
     siteName: 'Control Balance',
     images: [
       {
-        url: 'https://control-balance-pilates.vercel.app/images/fondo.jpeg', // Usamos tu imagen de fondo
+        url: 'https://controlbalancestudio.com/images/fondo.jpeg', // <-- Apuntando a tu dominio oficial
         width: 1200,
         height: 630,
         alt: 'Control Balance Pilates Studio',
