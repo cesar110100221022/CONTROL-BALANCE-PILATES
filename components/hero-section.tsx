@@ -190,6 +190,7 @@ export function HeroSection() {
         <nav className="hidden items-center gap-8 text-base font-medium tracking-wide text-foreground drop-shadow-md md:flex">
           <a href="#metodo" className="transition-colors duration-300 hover:text-foreground">El Método</a>
           <a href="#estudio" className="transition-colors duration-300 hover:text-foreground">El Estudio</a>
+          <a href="#eventos" className="transition-colors duration-300 hover:text-foreground">Eventos</a>
           {perfil ? (
             (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
               <button onClick={() => router.push("/admin")} className="group flex items-center gap-3 text-amber-600 font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
@@ -229,7 +230,7 @@ export function HeroSection() {
           <div className="flex flex-col px-6 py-8 gap-6">
             <a href="#metodo" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Método</a>
             <a href="#estudio" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Estudio</a>
-            
+            <a href="#eventos" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">Eventos</a>
             <div className="pt-2">
               {perfil ? (
                 (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
@@ -327,6 +328,18 @@ export function HeroSection() {
                 <p className="text-3xl md:text-4xl font-serif text-foreground mb-1">${plan.precio.toLocaleString('es-MX')}</p>
                 <p className="text-[10px] md:text-xs text-primary font-medium">{plan.desc}</p>
               </div>
+              
+              {/* --- INICIO: BOTÓN DE PAGO (REDIRECCIÓN WHATSAPP TEMPORAL) --- */}
+              <a 
+                href={`https://wa.me/528124697382?text=Hola%20Liliana,%20me%20interesa%20adquirir%20el%20paquete%20"${plan.nombre}"%20de%20$${plan.precio}.%20%C2%BFMe%20proporcionas%20los%20datos%20para%20transferencia?`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 w-full block text-center rounded-md bg-foreground text-background py-2.5 md:py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"
+              >
+                Comprar
+              </a>
+              {/* --- FIN: BOTÓN DE PAGO --- */}
+              
             </div>
           ))}
         </div>

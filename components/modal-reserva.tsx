@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { ModalLegal } from "./modal-legal"; // <-- 1. Importamos al fantasma
 
 export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onReservaExitosa }: any) {
+  const [modalLegal, setModalLegal] = useState<"terminos" | "privacidad" | "cancelaciones" | "">(""); // <-- 2. Memoria del clic
+  
   const [clasesDisponibles, setClasesDisponibles] = useState<any[]>([]);
   const [reservasActivas, setReservasActivas] = useState<any[]>([]);
   const [claseSeleccionada, setClaseSeleccionada] = useState("");
@@ -79,6 +82,25 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
     setIsSubmitting(false);
     onActualizarPerfil({ ...perfil, creditos: nuevosCreditos });
     alert("¡Reserva confirmada con éxito!");
+    // --- INICIO: ENVIAR CORREO A LA TÍA ---
+    try {
+      const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
+      await fetch('/api/notificacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombreCliente: perfil.nombre,
+          telefono: perfil.whatsapp, // <- NUEVO: Mandamos el WhatsApp
+          dia: diaSeleccionado,      // <- NUEVO: Mandamos la fecha
+          clase: claseElegida?.nombre || "Pilates Reformer",
+          horario: claseElegida?.horario || "Horario reservado",
+          creditosRestantes: nuevosCreditos // <- NUEVO: Mandamos los créditos
+        }),
+      });
+    } catch (error) {
+      console.error("No se pudo enviar el correo de alerta:", error);
+    }
+    // --- FIN: ENVIAR CORREO A LA TÍA ---
     setClaseSeleccionada("");
     onReservaExitosa(); 
     onClose();
@@ -142,6 +164,14 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
             <button onClick={guardarPerfil} disabled={isActualizando} className="w-full bg-primary text-primary-foreground py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest cursor-pointer disabled:opacity-50 hover:opacity-90 transition-opacity">
               {isActualizando ? "Guardando..." : "Guardar mis datos"}
             </button>
+            
+            {/* --- INICIO: DISCLAIMER LEGAL --- */}
+            <p className="text-[9px] md:text-[10px] text-center text-muted-foreground mt-4 leading-relaxed">
+              Al guardar tus datos y realizar una reserva, confirmas que aceptas nuestros <br className="hidden md:block"/>
+              <button onClick={() => setModalLegal("terminos")} className="underline hover:text-primary transition-colors cursor-pointer">Términos y Condiciones</button> y nuestra <button onClick={() => setModalLegal("cancelaciones")} className="underline hover:text-primary transition-colors cursor-pointer">Política de Cancelaciones</button>.
+            </p>
+            {/* --- FIN: DISCLAIMER LEGAL --- */}
+
           </div>
         ) : (
           <>
@@ -213,6 +243,15 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
           </>
         )}
       </div>
+
+      {/* --- INICIO: RENDERIZADO DEL MODAL LEGAL --- */}
+      <ModalLegal 
+        isOpen={modalLegal !== ""} 
+        onClose={() => setModalLegal("")} 
+        tipo={modalLegal} 
+      />
+      {/* --- FIN: RENDERIZADO DEL MODAL LEGAL --- */}
+
     </div>
   );
 }

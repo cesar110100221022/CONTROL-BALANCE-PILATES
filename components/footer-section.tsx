@@ -1,9 +1,13 @@
 "use client";
 
-import React from "react";
-import { ArrowRight} from "lucide-react";
+import React, { useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { ModalLegal } from "./modal-legal"; // <-- Invocamos al fantasma
 
 export function Footer() {
+  // <-- Agregamos la memoria para saber qué documento abrir
+  const [modalLegal, setModalLegal] = useState<"terminos" | "privacidad" | "cancelaciones" | "">(""); 
+
   return (
     <>
       {/* --- INICIO: FOOTER (PIE DE PÁGINA) --- */}
@@ -57,8 +61,17 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div className="max-w-[1400px] mx-auto mt-12 pt-6 border-t border-border/50 text-center text-[10px] uppercase tracking-widest text-muted-foreground/70">
-          © {new Date().getFullYear()} Control Balance Pilates. Todos los derechos reservados.
+        <div className="max-w-[1400px] mx-auto mt-12 pt-6 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          <p>© {new Date().getFullYear()} Control Balance Pilates. Todos los derechos reservados.</p>
+          
+          {/* --- INICIO: ENLACES LEGALES (PARA STRIPE) --- */}
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+            <button onClick={() => setModalLegal("terminos")} className="hover:text-primary transition-colors cursor-pointer">Términos y Condiciones</button>
+            <button onClick={() => setModalLegal("privacidad")} className="hover:text-primary transition-colors cursor-pointer">Aviso de Privacidad</button>
+            <button onClick={() => setModalLegal("cancelaciones")} className="hover:text-primary transition-colors cursor-pointer">Políticas de Cancelación</button>
+          </div>
+          {/* --- FIN: ENLACES LEGALES --- */}
+          
         </div>
       </footer>
       {/* --- FIN: FOOTER --- */}
@@ -76,6 +89,14 @@ export function Footer() {
         </svg>
       </a>
       {/* --- FIN: BOTÓN FLOTANTE WHATSAPP --- */}
+      
+      {/* --- INICIO: RENDERIZADO DEL MODAL LEGAL --- */}
+      <ModalLegal 
+        isOpen={modalLegal !== ""} 
+        onClose={() => setModalLegal("")} 
+        tipo={modalLegal} 
+      />
+      {/* --- FIN: RENDERIZADO DEL MODAL LEGAL --- */}
     </>
   );
 }
