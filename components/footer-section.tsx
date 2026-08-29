@@ -61,7 +61,9 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div className="max-w-[1400px] mx-auto mt-12 pt-6 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-widest text-muted-foreground/70">
+        
+        {/* Agregamos padding a la derecha (md:pr-24) para proteger la zona del botón flotante de WhatsApp */}
+        <div className="max-w-[1400px] mx-auto mt-12 pt-6 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-widest text-muted-foreground/70 md:pr-28">
           <p>© {new Date().getFullYear()} Control Balance Pilates. Todos los derechos reservados.</p>
           
           {/* --- INICIO: ENLACES LEGALES (PARA STRIPE) --- */}
