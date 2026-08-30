@@ -2,6 +2,7 @@ import { HeroSection } from "../components/hero-section";
 import { MethodSection } from "../components/method-section";
 import { StudioSection } from "../components/studio-section";
 import { Footer } from "../components/footer-section";
+import { MessageCircle } from "lucide-react";
 
 // --- INICIO: METADATA Y SEO (PARA WHATSAPP E INSTAGRAM) ---
 export const metadata = {
@@ -10,7 +11,15 @@ export const metadata = {
   openGraph: {
     title: "Control Balance | Pilates Reformer",
     description: "Movimiento consciente en un espacio diseñado para el silencio, la luz y la precisión. ¡Únete a nuestro estudio!",
-    images: ["/images/logo.PNG"], // Esta es la imagen que saldrá en la tarjeta de WhatsApp
+    url: "https://controlbalancestudio.com",
+    images: [
+      {
+        url: "https://controlbalancestudio.com/images/fondo.jpeg", // <-- Enlace absoluto necesario para WhatsApp
+        width: 1200,
+        height: 630,
+        alt: "Estudio Control Balance Pilates",
+      }
+    ],
   }
 };
 // --- FIN: METADATA Y SEO ---
@@ -40,9 +49,9 @@ export default function Page() {
             href="https://wa.me/528124697382?text=¡Hola!%20Me%20encantaría%20recibir%20información%20para%20organizar%20un%20evento%20privado%20en%20Control%20Balance."
             target="_blank"
             rel="noreferrer"
-            className="bg-foreground text-background px-8 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-lg"
+            className="flex items-center gap-2 bg-foreground text-background px-8 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-lg"
           >
-            💬 Cotizar mi Evento
+            <MessageCircle size={16} /> Cotizar mi Evento
           </a>
         </div>
       </section>

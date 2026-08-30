@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-
+import { DollarSign, Users, CalendarCheck, Gift, Search, AlertTriangle, UserPlus, MessageCircle, CheckCircle, Check, CreditCard, ShieldAlert, List, Star, Zap, Clock, Calendar, X, Inbox, ArrowLeft } from "lucide-react";
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("clientas"); // clientas, reservas, horarios
   
@@ -95,6 +95,13 @@ const [busquedaCliente, setBusquedaCliente] = useState("");
 const [busquedaReserva, setBusquedaReserva] = useState("");
 const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGREGAR ESTO
   const router = useRouter();
+
+  // --- INICIO: FUNCIÓN CERRAR SESIÓN ---
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+  // --- FIN: FUNCIÓN CERRAR SESIÓN ---
 
   // --- INICIO: MÓDULO FINANCIERO (ESTADOS Y FUNCIÓN) ---
   const [isVentaModalOpen, setIsVentaModalOpen] = useState(false);
@@ -730,6 +737,23 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
+            {/* --- INICIO: BOTONES DE NAVEGACIÓN --- */}
+            <div className="flex gap-3 mb-4">
+              <button 
+                onClick={() => router.push("/")} 
+                className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1.5 bg-secondary/30 hover:bg-secondary/80 px-4 py-2 rounded-full shadow-sm"
+              >
+                <ArrowLeft size={14} strokeWidth={2} /> Volver al inicio
+              </button>
+              <button 
+                onClick={cerrarSesion} 
+                className="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors cursor-pointer flex items-center border border-red-500/30 hover:bg-red-500/10 px-4 py-2 rounded-full shadow-sm"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
+            {/* --- FIN: BOTONES DE NAVEGACIÓN --- */}
+            
             <span className="font-serif text-3xl tracking-tight block">Panel de Administración</span>
             <p className="text-muted-foreground font-light text-sm mt-2">Control total del estudio Control Balance</p>
           </div>
@@ -739,34 +763,34 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
           
           {/* Tarjeta 1: Ingresos */}
           <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-2xl shadow-inner">
-              💰
+            <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-inner">
+              <DollarSign size={28} strokeWidth={1.5} />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Ingresos del Mes</p>
-              <p className="text-3xl font-serif text-foreground mt-1">${estadisticas.ingresosMes.toLocaleString('es-MX')}</p>
+              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">${estadisticas.ingresosMes.toLocaleString('es-MX')}</p>
             </div>
           </div>
 
           {/* Tarjeta 2: Clientas */}
           <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl shadow-inner">
-              🧘‍♀️
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <Users size={28} strokeWidth={1.5} />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clientas Activas</p>
-              <p className="text-3xl font-serif text-foreground mt-1">{estadisticas.totalClientas}</p>
+              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{estadisticas.totalClientas}</p>
             </div>
           </div>
 
           {/* Tarjeta 3: Operación de Hoy */}
           <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 text-2xl shadow-inner">
-              ☀️
+            <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner">
+              <CalendarCheck size={28} strokeWidth={1.5} />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clases de Hoy</p>
-              <p className="text-3xl font-serif text-foreground mt-1">{estadisticas.clasesHoy}</p>
+              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{estadisticas.clasesHoy}</p>
             </div>
           </div>
          {/* Tarjeta 4: Cumpleaños del Mes (NUEVA) */}
@@ -774,12 +798,12 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             onClick={() => setIsCumpleañosModalOpen(true)}
             className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-all hover:-translate-y-1 cursor-pointer hover:shadow-md border-pink-100/50 hover:border-pink-300"
           >
-            <div className="w-14 h-14 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 text-2xl shadow-inner">
-              🎂
+            <div className="w-14 h-14 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 shadow-inner">
+              <Gift size={28} strokeWidth={1.5} />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Cumpleaños del Mes</p>
-              <p className="text-3xl font-serif text-foreground mt-1">{cumpleañerasMes.length}</p>
+              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{cumpleañerasMes.length}</p>
             </div>
           </div>
 
@@ -798,7 +822,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             Gestor de Horarios
           </button>
           <button onClick={() => setActiveTab("finanzas")} className={`px-6 py-4 text-sm uppercase tracking-widest font-medium transition-colors whitespace-nowrap cursor-pointer ${activeTab === "finanzas" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            Finanzas 💰
+            Finanzas 
             
           </button>
         </div>
@@ -809,7 +833,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             {/* BUSCADOR DE CLIENTAS Y FILTRO DE COBRANZA */}
             <div className="p-4 border-b border-border bg-secondary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="flex items-center w-full">
-                <span className="text-xl mr-3">🔍</span>
+                <Search className="mr-3 text-muted-foreground" size={20} />
                 <input 
                   type="text" 
                   placeholder="Buscar por nombre o número..." 
@@ -824,12 +848,13 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   onClick={() => setFiltroCeroCreditos(!filtroCeroCreditos)}
                   className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer border ${filtroCeroCreditos ? 'bg-red-100 text-red-700 border-red-200' : 'bg-card text-muted-foreground border-border hover:bg-secondary/50'}`}
                 >
-                  {filtroCeroCreditos ? "🚨 0 Créditos" : "⚠️ 0 Créditos"}
+                  {filtroCeroCreditos ? <span className="flex items-center gap-1.5"><AlertTriangle size={14}/> 0 Créditos</span> : <span className="flex items-center gap-1.5"><AlertTriangle size={14}/> 0 Créditos</span>}
                 </button>
               </div>
             </div>
 
-            <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto w-full pb-4">
+              <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="border-b border-border bg-secondary/30 text-xs uppercase tracking-widest text-muted-foreground">
                   <th className="p-5 font-medium">Nombre de la Clienta</th>
@@ -853,7 +878,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                     {/* ETIQUETA VISUAL DE CLASE DE PRUEBA */}
                     {esTotalmenteNueva && (
                       <span className="inline-block mt-2 bg-emerald-100 text-emerald-800 text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded border border-emerald-200 shadow-sm">
-                        🌱 Nueva: Dar Clase de Prueba
+                        <span className="flex items-center gap-1.5"><UserPlus size={12}/> Nueva: Dar Prueba</span>
                       </span>
                     )}
 
@@ -867,15 +892,15 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
 
                       return (
                         <div className="mt-3 flex flex-col items-start gap-2 bg-red-50 p-2.5 rounded border border-red-200 shadow-sm">
-                          <span className="text-[10px] uppercase tracking-widest font-bold text-red-700">
-                            🚨 ADEUDO: ${deuda.monto_mxn} ({deuda.paquete_comprado})
+                          <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-red-700">
+                            <AlertTriangle size={12}/> ADEUDO: ${deuda.monto_mxn} ({deuda.paquete_comprado})
                           </span>
                           <div className="flex gap-2">
-                            <a href={linkWA} target="_blank" rel="noreferrer" className="bg-[#25D366] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
-                              💬 Cobrar x WA
+                            <a href={linkWA} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 bg-[#25D366] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
+                              <MessageCircle size={12}/> Cobrar x WA
                             </a>
-                            <button onClick={() => saldarDeuda(deuda.id, cliente.nombre)} className="bg-white text-red-600 border border-red-200 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors shadow-sm cursor-pointer">
-                              ✅ Marcar Pagado
+                            <button onClick={() => saldarDeuda(deuda.id, cliente.nombre)} className="flex items-center gap-1.5 bg-white text-red-600 border border-red-200 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors shadow-sm cursor-pointer">
+                              <Check size={12}/> Marcar Pagado
                             </button>
                           </div>
                         </div>
@@ -907,15 +932,15 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                     {/* --- FIN AVISO --- */}
 
                   </td>
-                  <td className="p-5 text-center"><span className="text-3xl font-serif text-primary">{cliente.creditos || 0}</span></td>
+                  <td className="p-5 text-center"><span className="text-3xl font-sans font-light tracking-tight text-primary">{cliente.creditos || 0}</span></td>
                     <td className="p-5 text-right">
                       <div className="flex justify-end items-center gap-2">
                         {/* BOTÓN PRINCIPAL DE VENTAS */}
                         <button 
                           onClick={() => { setClienteVenta(cliente); setIsVentaModalOpen(true); }}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
                         >
-                          💰 Vender
+                          <CreditCard size={14}/> Vender
                         </button>
                         
                         {/* AJUSTE MANUAL SECUNDARIO */}
@@ -934,6 +959,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               )}
             </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -943,7 +969,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             {/* BUSCADOR DE RESERVAS */}
             <div className="p-4 border-b border-border bg-secondary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="flex items-center w-full">
-                <span className="text-xl mr-3">🔍</span>
+                <Search className="mr-3 text-muted-foreground" size={20} />
                 <input 
                   type="text" 
                   placeholder="Buscar reserva por alumna..." 
@@ -957,7 +983,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               </span>
             </div>
 
-            <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto w-full pb-4">
+              <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-secondary/30 text-xs uppercase tracking-widest text-muted-foreground">
                   <th className="p-5 font-medium">Alumna</th>
@@ -997,11 +1024,11 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                             </span>
                             
                             <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs">
-                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium border border-amber-200 shadow-sm capitalize">
-                                📅 {fechaFormateada}
+                              <span className="flex items-center gap-1.5 bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium border border-amber-200 shadow-sm capitalize">
+                                <Calendar size={12}/> {fechaFormateada}
                               </span>
-                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-medium border border-primary/20 shadow-sm">
-                                ⏰ {claseAsignada?.horario || "Horario pendiente"}
+                              <span className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-0.5 rounded font-medium border border-primary/20 shadow-sm">
+                                <Clock size={12}/> {claseAsignada?.horario || "Horario pendiente"}
                               </span>
                             </div>
                           </div>
@@ -1023,6 +1050,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -1033,7 +1061,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               {diasCalendario.map((dia) => (
                 <button key={dia.id} onClick={() => setDiaSeleccionado(dia.id)} className={`min-w-[75px] p-3 rounded-lg text-center transition-all cursor-pointer ${diaSeleccionado === dia.id ? "bg-primary text-primary-foreground shadow-md" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>
                   <span className="block text-[10px] uppercase tracking-widest">{dia.nombre}</span>
-                  <span className="block font-serif text-2xl mt-1">{dia.numero}</span>
+                  {/* Actualizamos la fuente del número del día */}
+                  <span className="block font-sans font-light tracking-tight text-2xl mt-1">{dia.numero}</span>
                 </button>
               ))}
             </div>
@@ -1043,8 +1072,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                 <h4 className="font-medium text-sm text-foreground">¿Generar agenda semanal automática?</h4>
                 <p className="text-xs text-muted-foreground mt-0.5">Carga las clases fijas de Liliana para los próximos 7 días con un solo clic.</p>
               </div>
-              <button type="button" onClick={generarHorariosFijosSemana} className="bg-primary text-primary-foreground px-5 py-2.5 rounded text-xs font-medium uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap">
-                ⚡ Cargar Horarios Fijos
+              <button type="button" onClick={generarHorariosFijosSemana} className="flex items-center gap-1.5 bg-primary text-primary-foreground px-5 py-2.5 rounded text-xs font-medium uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap">
+                <Zap size={14}/> Cargar Horarios Fijos
               </button>
             </div>
 
@@ -1078,9 +1107,9 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   <button 
                     type="button"
                     onClick={ejecutarBotonPanico}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors shadow-md cursor-pointer"
+                    className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors shadow-md cursor-pointer"
                   >
-                    🚨 Cancelar Todo el Día
+                    <ShieldAlert size={14}/> Cancelar Todo el Día
                   </button>
                 </div>
                 {clasesDelDia.length === 0 ? (
@@ -1097,31 +1126,32 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
 
                       return (
                         <div key={clase.id} className="bg-card p-6 rounded-lg border border-border shadow-sm flex flex-col gap-4">
-                          <div className="flex justify-between items-start">
-                            <div>
+                          {/* Modificado para celular: apila los elementos (flex-col) y en PC los separa (sm:flex-row) */}
+                          <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-5">
+                            <div className="w-full">
                               <h4 className="font-serif text-2xl text-foreground">{clase.nombre}</h4>
                               <p className="text-sm font-medium text-primary mt-1">{clase.horario}</p>
-                              <div className="mt-3 flex items-center gap-2">
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${disponibles > 0 ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
                                   {ocupadas} / {maxCamas} Camas ocupadas
                                 </span>
                                 {disponibles > 0 && <span className="text-xs text-muted-foreground">({disponibles} disponibles)</span>}
-                                </div>
+                              </div>
                             </div>
-                            <div className="flex flex-col gap-2 items-end">
+                            <div className="flex flex-row flex-wrap sm:flex-col gap-2 items-start sm:items-end w-full sm:w-auto">
                               <button 
                                 onClick={() => abrirListaEspera(clase)} 
-                                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                className="flex items-center justify-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap flex-1 sm:flex-none"
                               >
-                                📢 Ver Fila de Espera
+                                <List size={12}/> Ver Fila de Espera
                               </button>
                               <button 
                                 onClick={() => { setClaseConciergeId(clase.id); setIsConciergeOpen(true); }} 
-                                className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                className="flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap flex-1 sm:flex-none"
                               >
-                                🛎️ Agendar VIP
+                                <Star size={12}/> Agendar VIP
                               </button>
-                              <button onClick={() => eliminarClase(clase.id)} className="text-[10px] text-red-500 hover:text-red-700 hover:underline cursor-pointer px-2 py-1 border border-red-200/50 rounded transition-colors">
+                              <button onClick={() => eliminarClase(clase.id)} className="w-full sm:w-auto text-center text-[10px] text-red-500 hover:text-red-700 hover:underline cursor-pointer px-2 py-1.5 border border-red-200/50 rounded transition-colors mt-1 sm:mt-0">
                                 Eliminar Clase
                               </button>
                             </div>
@@ -1156,7 +1186,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                             return (
                               <div className="pt-4 border-t border-border">
                                 <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-3 flex items-center gap-2">
-                                  ⏳ Fila de Espera ({enEspera.length})
+                                  <Clock size={14}/> Fila de Espera ({enEspera.length})
                                 </p>
                                 <ul className="space-y-2">
                                   {enEspera.map(espera => (
@@ -1169,26 +1199,26 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                                       <button 
                                         type="button"
                                         onClick={() => abrirWhatsApp(espera.nombre_cliente, espera.whatsapp, clase.nombre, clase.horario)}
-                                        className="bg-[#25D366] hover:bg-[#1ebd5a] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                                        className="flex items-center gap-1.5 bg-[#25D366] hover:bg-[#1ebd5a] text-white px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
                                         title="Preguntar por WhatsApp"
                                       >
-                                        💬 WA
+                                        <MessageCircle size={12}/> WA
                                       </button>
                                       <button 
                                         type="button"
                                         onClick={() => promoverListaEspera(espera, clase.id)}
-                                        className="bg-primary hover:opacity-90 text-primary-foreground px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                                        className="flex items-center gap-1.5 bg-primary hover:opacity-90 text-primary-foreground px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
                                         title="Agendar en la clase y cobrar crédito"
                                       >
-                                        ✅ Agendar
+                                        <Check size={12}/> Agendar
                                       </button>
                                       <button 
                                         type="button"
                                         onClick={() => descartarListaEspera(espera.id, espera.nombre_cliente)}
-                                        className="bg-card hover:bg-red-50 border border-red-200 text-red-600 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                        className="bg-card hover:bg-red-50 border border-red-200 text-red-600 px-2.5 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center"
                                         title="Sacar de la lista sin cobrar"
                                       >
-                                        ❌
+                                        <X size={12}/>
                                       </button>
                                     </div>
                                   </li>
@@ -1215,21 +1245,21 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               {/* Tarjeta 1: Total de Reservas */}
               <div className="bg-card p-8 rounded-lg border border-border shadow-sm flex flex-col justify-center items-center text-center">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Reservas Activas</p>
-                <span className="text-6xl font-serif text-foreground">{reservas.length}</span>
+                <span className="text-6xl font-sans font-light tracking-tighter text-foreground">{reservas.length}</span>
                 <p className="text-[10px] text-muted-foreground mt-4 uppercase">Camas apartadas hoy</p>
               </div>
 
               {/* Tarjeta 2: Clases Vendidas (Créditos + Reservas) */}
               <div className="bg-card p-8 rounded-lg border border-border shadow-sm flex flex-col justify-center items-center text-center">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Total Clases Vendidas</p>
-                <span className="text-6xl font-serif text-primary">{finanzas.totalClasesVendidas}</span>
+                <span className="text-6xl font-sans font-light tracking-tighter text-primary">{finanzas.totalClasesVendidas}</span>
                 <p className="text-[10px] text-muted-foreground mt-4 uppercase">Créditos en bolsa + Reservas</p>
               </div>
 
               {/* Tarjeta 3: Ingresos Exactos Calculados */}
               <div className="bg-primary p-8 rounded-lg shadow-lg flex flex-col justify-center items-center text-center text-primary-foreground transform transition-all hover:scale-105">
                 <p className="text-xs uppercase tracking-widest text-primary-foreground/80 mb-4">Ingresos Generados</p>
-                <span className="text-6xl font-serif">${finanzas.ingresosTotales.toLocaleString('es-MX')}</span>
+                <span className="text-6xl font-sans font-light tracking-tighter">${finanzas.ingresosTotales.toLocaleString('es-MX')}</span>
                 <p className="text-[10px] text-primary-foreground/70 mt-4 uppercase">Cálculo algorítmico exacto</p>
               </div>
             </div>
@@ -1326,16 +1356,16 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                     onChange={(e) => setEstatusPago(e.target.value)}
                     className={`w-full border rounded-lg bg-background p-3 text-sm focus:outline-none focus:border-primary font-bold ${estatusPago === "Pagado" ? "text-emerald-600 border-emerald-200" : "text-amber-600 border-amber-200"}`}
                   >
-                    <option value="Pagado">✅ Pagado</option>
-                    <option value="Pendiente">⏳ Pendiente</option>
+                    <option value="Pagado">Pagado</option>
+                    <option value="Pendiente">Pendiente</option>
                   </select>
                 </div>
               </div>
               
               <div className="pt-4 mt-6 border-t border-border flex justify-end gap-3">
                 <button type="button" onClick={() => setIsVentaModalOpen(false)} className="px-5 py-2.5 rounded text-xs uppercase tracking-widest font-medium text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">Cancelar</button>
-                <button type="submit" disabled={isProcesandoVenta} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
-                  {isProcesandoVenta ? "Guardando..." : "💰 Confirmar Venta"}
+                <button type="submit" disabled={isProcesandoVenta} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
+                  {isProcesandoVenta ? "Guardando..." : <><CheckCircle size={14}/> Confirmar Venta</>}
                 </button>
               </div>
             </form>
@@ -1349,7 +1379,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
           <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden">
             <div className="bg-amber-500/10 p-5 border-b border-amber-500/20 flex justify-between items-center">
-              <h3 className="font-serif text-xl text-amber-700">🛎️ Servicio Concierge VIP</h3>
+              <h3 className="flex items-center gap-2 font-serif text-xl text-amber-700"><Star size={20}/> Servicio Concierge VIP</h3>
               <button onClick={() => setIsConciergeOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
             </div>
             <form onSubmit={ejecutarConcierge} className="p-6 space-y-5">
@@ -1392,8 +1422,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
               
               <div className="pt-4 mt-6 border-t border-border flex justify-end gap-3">
                 <button type="button" onClick={() => setIsConciergeOpen(false)} className="px-5 py-2.5 rounded text-xs uppercase tracking-widest font-medium text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">Cancelar</button>
-                <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
-                  ✅ Apartar Cama
+                <button type="submit" className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded text-xs uppercase tracking-widest font-bold shadow-md transition-colors disabled:opacity-50 cursor-pointer">
+                  <Check size={14}/> Apartar Cama
                 </button>
               </div>
             </form>
@@ -1408,8 +1438,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
           <div className="bg-emerald-600/10 p-5 border-b border-emerald-600/20 flex justify-between items-center">
               <div>
                 <h3 className="font-serif text-xl text-emerald-800">Fila de Espera</h3>
-                <p className="text-xs text-emerald-700/80 mt-1 font-bold uppercase tracking-widest">
-                  📅 {claseEsperaInfo.dia} • {claseEsperaInfo.horario}
+                <p className="flex items-center gap-1.5 text-xs text-emerald-700/80 mt-1 font-bold uppercase tracking-widest">
+                  <Calendar size={12}/> {claseEsperaInfo.dia} • {claseEsperaInfo.horario}
                 </p>
               </div>
               <button onClick={() => setIsListaEsperaOpen(false)} className="text-muted-foreground hover:text-foreground text-xl cursor-pointer">✕</button>
@@ -1418,7 +1448,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             <div className="p-6 overflow-y-auto">
               {personasEnEspera.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-                  <p className="text-2xl mb-2">🍃</p>
+                  <Inbox className="mx-auto mb-3 opacity-50" size={32} />
                   <p className="text-sm">Nadie está en espera para esta clase.</p>
                 </div>
               ) : (
@@ -1441,11 +1471,11 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                           <span className="block ml-7 text-xs text-muted-foreground">{persona.whatsapp}</span>
                         </div>
                         <div className="flex gap-2 ml-7 sm:ml-0">
-                          <a href={linkWA} target="_blank" rel="noreferrer" className="flex-1 sm:flex-none text-center bg-[#25D366] text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
-                            💬 Avisar
-                          </a>
-                          <button onClick={() => quitarDeLista(persona.id)} className="px-3 py-1.5 border border-border text-muted-foreground hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer title='Quitar de la lista'">
-                            ✕
+                        <a href={linkWA} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1.5 flex-1 sm:flex-none bg-[#25D366] text-white px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer">
+                                        <MessageCircle size={12}/> Avisar
+                                      </a>
+                          <button onClick={() => quitarDeLista(persona.id)} className="flex items-center justify-center px-3 py-1.5 border border-border text-muted-foreground hover:bg-red-50 hover:text-red-500 hover:border-red-200 rounded text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer" title="Quitar de la lista">
+                            <X size={12}/>
                           </button>
                         </div>
                       </div>
@@ -1473,7 +1503,7 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             <div className="p-6 overflow-y-auto">
               {cumpleañerasMes.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-                  <p className="text-2xl mb-2">🎂</p>
+                  <Inbox className="mx-auto mb-3 opacity-50 text-muted-foreground" size={32} />
                   <p className="text-sm">No hay cumpleaños registrados este mes.</p>
                 </div>
               ) : (
@@ -1490,8 +1520,8 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                           <span className="font-medium text-sm text-foreground">{persona.nombre}</span>
                           <span className="block text-xs text-muted-foreground mt-0.5">Día del mes: <span className="font-bold text-pink-600">{dia}</span></span>
                         </div>
-                        <a href={linkWA} target="_blank" rel="noreferrer" className="text-center bg-[#25D366] text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2">
-                          💬 Felicitar
+                        <a href={linkWA} target="_blank" rel="noreferrer" className="text-center bg-[#25D366] text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1.5">
+                          <MessageCircle size={14}/> Felicitar
                         </a>
                       </div>
                     );

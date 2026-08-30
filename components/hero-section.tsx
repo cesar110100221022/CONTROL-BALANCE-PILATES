@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, Crown, Sparkles } from "lucide-react";
 import { supabase } from "../lib/supabase"; 
 import { useRouter } from "next/navigation";
 import { ModalReserva } from "./modal-reserva";
@@ -41,6 +41,9 @@ export function HeroSection() {
   const [whatsappInput, setWhatsappInput] = useState("");
   const [isActualizando, setIsActualizando] = useState(false);
 
+  // AGREGAR ESTO: Memoria inteligente para el botón "Vivir la experiencia"
+  const [rutaDestino, setRutaDestino] = useState("/login");
+
   useEffect(() => {
     setIsMounted(true);
     obtenerClases();
@@ -60,7 +63,10 @@ export function HeroSection() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data } = await supabase.from("perfiles").select("*").eq("id", user.id).single();
-      if (data) setPerfil({ ...data, email: user.email }); 
+      if (data) {
+        setPerfil({ ...data, email: user.email }); 
+        setRutaDestino("/dashboard"); // <-- AGREGAR ESTO: Si tiene sesión, cambia la ruta
+      }
     }
   };
 
@@ -194,8 +200,8 @@ export function HeroSection() {
           {perfil ? (
             (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
               <button onClick={() => router.push("/admin")} className="group flex items-center gap-3 text-amber-600 font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
-                <div className="w-8 h-8 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center text-amber-600 text-[10px] shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  👑
+                <div className="w-8 h-8 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center text-amber-600 shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                  <Crown size={14} strokeWidth={2} />
                 </div>
                 <span>Panel de Control</span>
               </button>
@@ -235,7 +241,7 @@ export function HeroSection() {
               {perfil ? (
                 (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
                   <button onClick={() => router.push("/admin")} className="flex w-full items-center justify-between bg-amber-600/10 p-4 rounded-xl border border-amber-600/20 text-amber-700">
-                    <span className="font-medium text-lg">Panel de Control 👑</span>
+                    <span className="flex items-center gap-2 font-medium text-lg"><Crown size={18} strokeWidth={2} /> Panel de Control</span>
                     <ArrowRight size={20} />
                   </button>
                 ) : (
@@ -290,7 +296,9 @@ export function HeroSection() {
             <p className="text-muted-foreground mt-2 font-light text-sm md:text-base">Invierte en ti. Elige el plan que mejor se adapte a tu rutina.</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 text-[10px] md:text-xs tracking-wider uppercase font-medium w-full md:w-auto">
-            <span className="bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20 text-center">✨ Aceptamos TotalPass</span>
+            <span className="flex items-center justify-center gap-1.5 bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20 text-center">
+              <Sparkles size={14} /> Aceptamos TotalPass
+            </span>
             <span className="bg-secondary/50 text-foreground px-4 py-2 rounded-full border border-border text-center">Primera Clase Gratis</span>
           </div>
         </div>
@@ -325,7 +333,7 @@ export function HeroSection() {
               )}
               <div>
                 <h3 className="font-medium text-xs md:text-sm uppercase tracking-wider text-muted-foreground mb-2 md:mb-4">{plan.nombre}</h3>
-                <p className="text-3xl md:text-4xl font-serif text-foreground mb-1">${plan.precio.toLocaleString('es-MX')}</p>
+                <p className="text-3xl md:text-4xl font-sans font-light tracking-tight text-foreground mb-1">${plan.precio.toLocaleString('es-MX')}</p>
                 <p className="text-[10px] md:text-xs text-primary font-medium">{plan.desc}</p>
               </div>
               

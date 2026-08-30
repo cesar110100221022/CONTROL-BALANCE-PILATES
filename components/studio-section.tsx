@@ -1,6 +1,23 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase'; // <-- Asegúrate de que esta ruta coincida con tu proyecto
 
 export function StudioSection() {
+  // 1. Memoria inteligente para el botón (por defecto manda a login)
+  const [rutaDestino, setRutaDestino] = useState("/login");
+
+  // 2. Verificación silenciosa al cargar la página
+  useEffect(() => {
+    const verificarSesion = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setRutaDestino("/dashboard"); // Si ya tiene llaves, la manda directo a su panel
+      }
+    };
+    verificarSesion();
+  }, []);
+
   return (
     <section id="estudio" className="py-24 px-6 md:px-12 bg-background text-foreground relative z-10">
       <div className="max-w-[1400px] mx-auto text-center">
@@ -32,17 +49,17 @@ export function StudioSection() {
             </p>
           </div>
         </div>
-        {/* --- INICIO: BOTÓN DE CIERRE DE VENTA --- */}
+        {/* --- INICIO: BOTÓN DE CIERRE DE VENTA INTELIGENTE --- */}
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
           <a 
-            href="/login" 
+            href={rutaDestino} 
             className="inline-flex items-center justify-center gap-3 bg-primary text-primary-foreground px-8 py-4 rounded-full text-xs font-bold uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer"
           >
             Vivir la Experiencia
             <span className="text-lg">→</span>
           </a>
         </div>
-        {/* --- FIN: BOTÓN DE CIERRE DE VENTA --- */}
+        {/* --- FIN: BOTÓN DE CIERRE DE VENTA INTELIGENTE --- */}
       </div>
     </section>
   );

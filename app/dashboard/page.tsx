@@ -95,128 +95,157 @@ export default function DashboardClienta() {
     router.push("/");
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-foreground text-xs uppercase tracking-widest">Cargando tu estudio...</div>;
+  // --- INICIO: SKELETON LOADER PREMIUM ---
+  if (isLoading) return (
+    <div className="min-h-screen bg-background relative z-10 max-w-[1000px] mx-auto p-6 md:p-12 pt-20">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-16 gap-6 animate-pulse">
+        <div className="space-y-3 w-full md:w-1/3">
+          <div className="h-3 w-32 bg-secondary/80 rounded"></div>
+          <div className="h-10 w-48 bg-secondary/60 rounded-xl"></div>
+        </div>
+        <div className="h-10 w-32 bg-secondary/50 rounded-full"></div>
+      </div>
+      <div className="grid lg:grid-cols-12 gap-10">
+        <div className="lg:col-span-5 h-[350px] bg-secondary/40 rounded-[2rem] animate-pulse"></div>
+        <div className="lg:col-span-7 space-y-4">
+          <div className="h-4 w-40 bg-secondary/50 rounded mb-6 animate-pulse"></div>
+          <div className="h-28 bg-secondary/30 rounded-3xl animate-pulse"></div>
+          <div className="h-28 bg-secondary/30 rounded-3xl animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  );
+  // --- FIN: SKELETON LOADER PREMIUM ---
 
  // Filtramos y ORDENAMOS cronológicamente las clases (las más próximas primero)
  const misClasesActivas = misReservas
  .filter(r => calcularHorasFaltantes(r.claseInfo.dia, r.claseInfo.horario) > -2)
  .sort((a, b) => calcularHorasFaltantes(a.claseInfo.dia, a.claseInfo.horario) - calcularHorasFaltantes(b.claseInfo.dia, b.claseInfo.horario));
 
-  return (
-    <main className="min-h-screen bg-background text-foreground bg-[url('/images/studio-hero.png')] bg-cover bg-fixed bg-center relative">
-      {/* Capa de cristal difuminado para el fondo */}
-      <div className="absolute inset-0 bg-background/90 backdrop-blur-xl"></div>
+ return (
+  <main className="min-h-screen bg-background text-foreground bg-[url('/images/studio-hero.png')] bg-cover bg-fixed bg-center relative">
+    <div className="absolute inset-0 bg-background/95 backdrop-blur-3xl"></div>
+    
+    <div className="relative z-10 max-w-[1000px] mx-auto p-6 md:p-12 pt-20">
       
-      <div className="relative z-10 max-w-4xl mx-auto p-6 md:p-12 pt-20">
-        <header className="flex justify-between items-end mb-12 border-b border-border/30 pb-6">
-        <div>
-            <p className="text-xs uppercase tracking-widest text-primary mb-2 font-bold">Mi Espacio</p>
-            <h1 className="font-serif text-4xl text-foreground">Hola, {perfil?.nombre?.split(' ')[0] || "Atleta"}</h1>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-4">
-          <button onClick={() => setIsModalOpen(true)} className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer shadow-sm">
-              + Nueva Reserva
-            </button>
-            <button onClick={() => router.push("/")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">← Inicio</button>
-            <button onClick={cerrarSesion} className="text-sm font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer">Cerrar Sesión</button>
-          </div>
-        </header>
+      {/* --- INICIO: ENCABEZADO VIP --- */}
+      <header className="flex flex-col md:flex-row justify-between items-center mb-16 gap-6">
+        <div className="text-center md:text-left">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">Mi Espacio Balance</p>
+          <h1 className="font-serif text-5xl text-foreground">Hola, {perfil?.nombre?.split(' ')[0] || "Atleta"}</h1>
+        </div>
+        <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6">
+          <button onClick={() => router.push("/")} className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer">← Inicio</button>
+          <button onClick={cerrarSesion} className="text-[10px] uppercase tracking-widest font-bold text-red-500 hover:text-red-700 transition-colors cursor-pointer border border-red-500/30 px-4 py-2 rounded-full hover:bg-red-500/10">Cerrar Sesión</button>
+        </div>
+      </header>
+      {/* --- FIN: ENCABEZADO VIP --- */}
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Columna Izquierda: Perfil y Créditos */}
-          <div className="md:col-span-1 space-y-6">
-            <div className="bg-card/40 backdrop-blur-md border border-border/50 p-8 rounded-2xl shadow-xl text-center">
-              <div className="w-20 h-20 mx-auto bg-primary/20 text-primary rounded-full flex items-center justify-center text-3xl font-serif mb-4 uppercase">
-                {perfil?.nombre?.charAt(0) || "A"}
+      <div className="grid lg:grid-cols-12 gap-10">
+        
+       {/* COLUMNA IZQUIERDA: TARJETA DE CRÉDITOS CLARA Y LIMPIA */}
+       <div className="lg:col-span-5 space-y-6">
+            <div className="bg-card border border-border p-10 rounded-[2rem] shadow-xl relative overflow-hidden">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-bold">Créditos Disponibles</p>
+              <div className="flex items-baseline gap-3">
+                <span className="text-8xl font-sans font-light tracking-tighter text-foreground">{perfil?.creditos || 0}</span>
+                <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Clases</span>
               </div>
-              <h2 className="font-medium text-lg">{perfil?.nombre}</h2>
-              <p className="text-xs text-muted-foreground font-mono mt-1">{perfil?.whatsapp}</p>
               
-              <div className="mt-8 pt-8 border-t border-border/30">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Créditos Disponibles</p>
-                <span className="text-7xl font-serif text-primary">{perfil?.creditos || 0}</span>
+              <div className="mt-12 flex flex-col gap-3">
+                {/* BOTÓN LIMPIO Y DE ALTO CONTRASTE */}
+                <button 
+                  onClick={() => setIsModalOpen(true)} 
+                  className="w-full bg-foreground text-background py-4 rounded-xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all cursor-pointer shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                >
+                  + Reservar Clase
+                </button>
                 {perfil?.creditos <= 0 && (
-                  <button onClick={() => window.open("https://wa.me/528124697382", "_blank")} className="w-full mt-6 bg-primary text-white py-3 rounded-lg text-xs uppercase tracking-widest font-bold hover:bg-primary/90 transition-colors cursor-pointer">
+                  <button onClick={() => window.open("https://wa.me/528124697382", "_blank")} className="w-full bg-secondary text-foreground py-4 rounded-xl text-xs uppercase tracking-widest font-bold hover:bg-secondary/80 transition-colors cursor-pointer border border-border">
                     Recargar Paquete
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Aviso de Política */}
-            <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl shadow-sm">
-              <h3 className="text-amber-700 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">⚠️ Política del Estudio</h3>
-              <p className="text-xs text-muted-foreground/80 leading-relaxed">
-                Las cancelaciones deben realizarse con al menos <b>12 horas de anticipación</b>. Si cancelas después de este tiempo, perderás la clase y no se devolverá el crédito.
+          {/* AVISO DE POLÍTICAS (AHORA ES SUTIL Y ELEGANTE) */}
+          <div className="bg-card/30 backdrop-blur-md border border-border p-6 rounded-3xl flex items-start gap-4">
+            <span className="text-2xl mt-1 text-muted-foreground/50">⚖️</span>
+            <div>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest mb-1 text-foreground">Política de Cancelación</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Cancela con al menos <b>12 horas de anticipación</b> para no perder tu crédito.
               </p>
             </div>
           </div>
-
-          {/* Columna Derecha: Próximas Clases */}
-          <div className="md:col-span-2">
-            <h3 className="font-serif text-2xl mb-6">Tus Próximas Clases</h3>
-            
-            {misClasesActivas.length === 0 ? (
-              <div className="bg-card/30 backdrop-blur-md border border-dashed border-border p-12 rounded-2xl text-center">
-                <span className="text-4xl mb-4 block">🧘‍♀️</span>
-                <p className="text-muted-foreground">No tienes ninguna clase programada.</p>
-                <button onClick={() => setIsModalOpen(true)} className="mt-6 bg-foreground text-background px-6 py-3 rounded text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity cursor-pointer">
-                  Reservar Ahora
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-               {misClasesActivas.map((reserva) => {
-                  const horasFaltantes = calcularHorasFaltantes(reserva.claseInfo.dia, reserva.claseInfo.horario);
-                  const estaEnPenalizacion = horasFaltantes > 0 && horasFaltantes < 12;
-                  
-                  // Vacuna de Zona Horaria para evitar que el navegador reste 6 horas
-                  const [year, month, day] = reserva.claseInfo.dia.split('-');
-                  const fechaLocalExacta = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-
-                  return (
-                    <div key={reserva.id} className="bg-card/60 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-transform hover:-translate-y-1">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider">
-                            {reserva.claseInfo.nombre}
-                          </span>
-                          {/* Alerta si está en las 12 horas */}
-                          {estaEnPenalizacion && (
-                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                              Penalización Activa
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="font-serif text-2xl mt-2">{fechaLocalExacta.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</h4>
-                        <p className="text-primary font-medium">{reserva.claseInfo.horario}</p>
-                      </div>
-
-                      <button 
-                        onClick={() => cancelarMiReserva(reserva)}
-                        className="w-full sm:w-auto px-5 py-2.5 border border-red-200 text-red-500 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors cursor-pointer text-center"
-                      >
-                        Cancelar Clase
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
- </div>
         </div>
-      </div>
-      
-      {/* AQUÍ INYECTAMOS EL MODAL FLOTANTE */}
-      <ModalReserva 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        perfil={perfil}
-        onActualizarPerfil={(nuevoPerfil: any) => setPerfil(nuevoPerfil)}
-        onReservaExitosa={cargarDatos}
-      />
+        {/* --- FIN: TARJETA NEGRA --- */}
 
-    </main>
-  );
+        {/* --- INICIO: LISTA DE CLASES LIMPIA --- */}
+        <div className="lg:col-span-7">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-6">Tus Próximas Reservas</h3>
+          
+          {misClasesActivas.length === 0 ? (
+            <div className="bg-card/10 backdrop-blur-sm border border-dashed border-border/60 p-12 rounded-[2rem] text-center flex flex-col items-center justify-center h-64">
+              <span className="text-4xl mb-4 opacity-40 block filter grayscale">🍃</span>
+              <p className="text-muted-foreground text-sm font-medium">Tu agenda está libre.</p>
+              <button onClick={() => setIsModalOpen(true)} className="mt-4 text-[10px] uppercase tracking-widest font-bold text-primary hover:underline cursor-pointer">
+                Ver horarios disponibles
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+             {misClasesActivas.map((reserva) => {
+                const horasFaltantes = calcularHorasFaltantes(reserva.claseInfo.dia, reserva.claseInfo.horario);
+                const estaEnPenalizacion = horasFaltantes > 0 && horasFaltantes < 12;
+                
+                const [year, month, day] = reserva.claseInfo.dia.split('-');
+                const fechaLocalExacta = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+                return (
+                  <div key={reserva.id} className="bg-card/40 backdrop-blur-md border border-border p-6 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-transform hover:-translate-y-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="bg-foreground text-background px-3 py-1 rounded-full text-[9px] uppercase font-bold tracking-wider">
+                          {reserva.claseInfo.nombre}
+                        </span>
+                        {estaEnPenalizacion && (
+                          <span className="text-[9px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 border border-red-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                            Penalización Activa
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-serif text-2xl mt-1 text-foreground capitalize">
+                        {fechaLocalExacta.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </h4>
+                      <p className="text-primary font-bold text-sm tracking-wider mt-1">{reserva.claseInfo.horario}</p>
+                    </div>
+
+                    <button 
+                      onClick={() => cancelarMiReserva(reserva)}
+                      className="w-full sm:w-auto px-5 py-3 border border-red-200 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer text-center"
+                    >
+                      Cancelar Clase
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* --- FIN: LISTA DE CLASES LIMPIA --- */}
+      </div>
+    </div>
+    
+    {/* AQUÍ INYECTAMOS EL MODAL FLOTANTE QUE YA TENÍAS */}
+    <ModalReserva 
+      isOpen={isModalOpen} 
+      onClose={() => setIsModalOpen(false)} 
+      perfil={perfil}
+      onActualizarPerfil={(nuevoPerfil: any) => setPerfil(nuevoPerfil)}
+      onReservaExitosa={cargarDatos}
+    />
+  </main>
+);
 }
