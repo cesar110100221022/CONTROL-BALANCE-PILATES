@@ -43,6 +43,8 @@ export function HeroSection() {
 
   // AGREGAR ESTO: Memoria inteligente para el botón "Vivir la experiencia"
   const [rutaDestino, setRutaDestino] = useState("/login");
+  // 👇 AGREGAR ESTO: Estado aislado para el aviso de cancelación 👇
+  const [pagoCancelado, setPagoCancelado] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -58,6 +60,18 @@ export function HeroSection() {
       window.history.replaceState(null, "", "/");
     }
   }, [perfil]);
+  // 👇 AGREGAR ESTO: Efecto aislado que lee la URL y se limpia solo 👇
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('pago') === 'cancelado') {
+      setPagoCancelado(true);
+      const timer = setTimeout(() => {
+        window.history.replaceState(null, '', window.location.pathname);
+        setPagoCancelado(false);
+      }, 5000);
+      return () => clearTimeout(timer); // Buena práctica: limpiar el timer
+    }
+  }, []);
 
   const verificarUsuario = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -105,6 +119,19 @@ export function HeroSection() {
       alert("No tienes créditos suficientes. Por favor, contacta a Liliana para recargar tu paquete.");
       return;
     }
+
+    // 👇 AGREGAR ESTO: Candado de caducidad 👇
+    if (perfil.fecha_expiracion) {
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0); // Ignoramos la hora exacta, solo importa el día
+      const expiracion = new Date(`${perfil.fecha_expiracion}T00:00:00`); // Forzar zona horaria neutral
+      
+      if (hoy > expiracion) {
+        alert(`Tus créditos vencieron el ${expiracion.toLocaleDateString('es-MX')}. Por favor, adquiere un nuevo paquete para seguir entrenando.`);
+        return; // Detenemos la reserva
+      }
+    }
+    // 👆 FIN DEL CANDADO 👆
 
     const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
     const maxCamas = claseElegida?.cupo_max || 6;
@@ -178,7 +205,40 @@ export function HeroSection() {
   const clasesDelDia = clasesDisponibles
     .filter((c) => c.dia && c.dia.startsWith(diaSeleccionado))
     .sort((a, b) => convertirAMinutos(a.horario) - convertirAMinutos(b.horario));
+    // Función conectada a Stripe con blindaje de usuario para recarga automática
+  const procesarPagoStripe = async (priceId?: string) => {
+    if (!priceId) return;
 
+    // Si no ha iniciado sesión, la enviamos al login para saber a quién acreditarle las clases
+    if (!perfil) {
+      alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
+      router.push("/login");
+      return;
+    }
+    
+    try {
+      const respuesta = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId,
+          userId: perfil.id,
+          userEmail: perfil.email 
+        }) 
+      });
+      
+      const datos = await respuesta.json();
+      
+      if (datos.url) {
+        window.location.href = datos.url; // Redirige a la caja de cobro segura de Stripe
+      } else {
+        alert("No se pudo iniciar el proceso de pago. Intenta más tarde.");
+      }
+    } catch (error) {
+      console.error("Error al procesar checkout:", error);
+      alert("Hubo un problema de conexión con el servidor de pagos.");
+    }
+  };
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
       {/* FONDO ANIMADO - OPTIMIZADO PARA MÓVIL Y PC */}
@@ -255,13 +315,22 @@ export function HeroSection() {
                   Iniciar Sesión
                 </button>
               )}
-            </div>
+              </div>
           </div>
+        </div>
+      )}
+
+      {/* 👇 AGREGAR ESTO: Banner flotante que no rompe el layout 👇 */}
+      {pagoCancelado && (
+        <div className="relative z-30 mx-auto mt-4 max-w-md bg-red-100 border-l-4 border-red-500 text-red-700 p-4 shadow-md rounded-r-md animate-in fade-in slide-in-from-top-4">
+          <p className="font-bold text-sm">Pago cancelado</p>
+          <p className="text-xs mt-1">No se ha realizado ningún cargo a tu tarjeta.</p>
         </div>
       )}
 
       {/* TEXTO PRINCIPAL - DISEÑO ELEGANTE Y COMPACTO */}
       <div className="relative z-10 mx-auto flex min-h-[50vh] md:min-h-[65vh] max-w-[1400px] flex-col justify-center px-6 pb-8 pt-4 md:pb-16 md:px-12">
+           
         <p className="animate-rise mb-3 md:mb-6 flex items-center gap-3 text-xs md:text-sm font-bold uppercase tracking-[0.15em] md:tracking-[0.25em] text-foreground/90 drop-shadow-sm [animation-delay:0.1s]">
           ESTUDIO PILATES REFORMER
         </p>
@@ -318,12 +387,12 @@ export function HeroSection() {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[
-            { nombre: "Clase Suelta", precio: 240,  },
-            { nombre: "8 Clases", precio: 1200,  },
-            { nombre: "12 Clases", precio: 1680,  },
-            { nombre: "16 Clases", precio: 2160,  },
-            { nombre: "20 Clases", precio: 2640, },
-            { nombre: "Ilimitadas", precio: 3040, desc: "Entrena sin límites", esPopular: true }
+            { nombre: "Clase Suelta", precio: 240, desc: "Vigencia: 7 días", priceId: "price_1UCvY9PXqkbuRJkatIwCDBWw" }, // Asumiendo que este es el de 1 clase
+            { nombre: "8 Clases", precio: 1200, desc: "Vigencia: 30 días", priceId: "price_1UCvfNPXqkbuRJka0Trdg8UO" }, 
+            { nombre: "12 Clases", precio: 1780, desc: "Vigencia: 30 días", priceId: "price_1UCvjAPXqkbuRJkaF7V8zcEw" },
+            { nombre: "16 Clases", precio: 2280, desc: "Vigencia: 30 días", priceId: "price_1UCvo1PXqkbuRJkaOJUcfZ7M" },
+            { nombre: "20 Clases", precio: 2780, desc: "Vigencia: 45 días", priceId: "price_1UCvovPXqkbuRJkauMH3Ffkg" },
+            { nombre: "Ilimitadas", precio: 3200, desc: "Vigencia: 60 días", esPopular: true, priceId: "price_1UCvq3PXqkbuRJkapXnB8gQ5" }
           ].map((plan, i) => (
             <div key={i} className={`relative bg-card/60 backdrop-blur-md border ${plan.esPopular ? 'border-primary shadow-lg shadow-primary/10' : 'border-border hover:border-primary/50'} p-5 md:p-6 rounded-xl transition-all hover:-translate-y-1 flex flex-col justify-between`}>
               {plan.esPopular && (
@@ -337,16 +406,27 @@ export function HeroSection() {
                 <p className="text-[10px] md:text-xs text-primary font-medium">{plan.desc}</p>
               </div>
               
-              {/* --- INICIO: BOTÓN DE PAGO (REDIRECCIÓN WHATSAPP TEMPORAL) --- */}
-              <a 
-                href={`https://wa.me/528124697382?text=Hola%20Liliana,%20me%20interesa%20adquirir%20el%20paquete%20"${plan.nombre}"%20de%20$${plan.precio}.%20%C2%BFMe%20proporcionas%20los%20datos%20para%20transferencia?`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 w-full block text-center rounded-md bg-foreground text-background py-2.5 md:py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"
-              >
-                Comprar
-              </a>
-              {/* --- FIN: BOTÓN DE PAGO --- */}
+              {/* --- INICIO: BOTONES DE PAGO (TARJETA VS TRANSFERENCIA) --- */}
+              <div className="mt-6 flex flex-col gap-2">
+                {/* Botón principal: Stripe Checkout automático */}
+                <button 
+                  onClick={() => procesarPagoStripe(plan.priceId)}
+                  className="w-full block text-center rounded-md bg-foreground text-background py-2.5 md:py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"
+                >
+                  Pagar con Tarjeta
+                </button>
+                
+                {/* Botón secundario: Pago manual por WhatsApp */}
+                <a 
+                  href={`https://wa.me/528124697382?text=Hola%20Liliana,%20me%20interesa%20adquirir%20el%20paquete%20"${plan.nombre}"%20de%20$${plan.precio}.%20%C2%BFMe%20proporcionas%20los%20datos%20para%20transferencia?`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block text-center rounded-md border border-border bg-transparent text-foreground py-2 md:py-2.5 text-[9px] md:text-[10px] font-medium uppercase tracking-wider hover:bg-secondary transition-all duration-300 cursor-pointer"
+                >
+                  Transferencia / Efectivo
+                </a>
+              </div>
+              {/* --- FIN: BOTONES DE PAGO --- */}
               
             </div>
           ))}
