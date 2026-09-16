@@ -728,6 +728,24 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
     const esClaseFutura = clase && diasValidos.includes(clase.dia);
     return coincideBusqueda && esClaseFutura;
   });
+  // 👇 AGREGAR ESTO: Escáner Inteligente de Lista de Espera 👇
+  const alertasListaEspera = clases.map(clase => {
+    // Solo revisar clases futuras
+    if (!diasValidos.includes(clase.dia)) return null;
+
+    const ocupadas = reservas.filter(r => String(r.clase_id) === String(clase.id)).length;
+    const maxCamas = clase.cupo_max || 6;
+    const disponibles = maxCamas - ocupadas;
+    const enEspera = listaEspera.filter(e => String(e.clase_id) === String(clase.id));
+
+    // Si hay camas vacías Y hay gente esperando, disparamos la alerta
+    if (disponibles > 0 && enEspera.length > 0) {
+      return { clase, disponibles, enEspera };
+    }
+    return null;
+  }).filter(Boolean);
+  // 👆 FIN DEL ESCÁNER 👆
+  
   // --- FIN: LÓGICA DE BUSCADORES ---
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-foreground tracking-widest uppercase text-xs">Cargando panel operativo...</div>;
 
@@ -758,6 +776,45 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
             <p className="text-muted-foreground font-light text-sm mt-2">Control total del estudio Control Balance</p>
           </div>
         </header>
+        {/* 👇 AGREGAR ESTO: BANNER DEL ASISTENTE VIRTUAL 👇 */}
+        {alertasListaEspera.length > 0 && (
+          <div className="mb-8 bg-amber-50 border-l-4 border-amber-500 p-5 rounded-r-xl shadow-md animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="text-amber-600 animate-pulse" size={20} />
+              <h3 className="font-bold text-amber-800 uppercase tracking-widest text-sm">Oportunidad de Recuperación de Espacios</h3>
+            </div>
+            <div className="space-y-3">
+              {alertasListaEspera.map((alerta: any, idx) => {
+                const primerLugar = alerta.enEspera[0];
+                return (
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Se liberó <span className="font-bold text-amber-600">{alerta.disponibles} cama(s)</span> en <b>{alerta.clase.nombre}</b> ({alerta.clase.horario}, {alerta.clase.dia})
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">El lugar #1 de la fila es <b>{primerLugar.nombre_cliente}</b>.</p>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button 
+                        onClick={() => abrirWhatsApp(primerLugar.nombre_cliente, primerLugar.whatsapp, alerta.clase.nombre, alerta.clase.horario)}
+                        className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 bg-[#25D366] text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ebd5a] transition-colors shadow-sm"
+                      >
+                        <MessageCircle size={14}/> Avisarle
+                      </button>
+                      <button 
+                        onClick={() => promoverListaEspera(primerLugar, alerta.clase.id)}
+                        className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 bg-amber-500 text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-amber-600 transition-colors shadow-sm"
+                      >
+                        <Check size={14}/> Agendarla
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* 👆 FIN: BANNER DEL ASISTENTE VIRTUAL 👆 */}
         {/* --- INICIO: TARJETAS DE ESTADÍSTICAS --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
