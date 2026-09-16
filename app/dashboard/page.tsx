@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import { ModalReserva } from "../../components/modal-reserva";
+import Swal from 'sweetalert2';
 
 export default function DashboardClienta() {
   const [perfil, setPerfil] = useState<any>(null);
@@ -11,6 +12,14 @@ export default function DashboardClienta() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // NUEVO: Memoria para la ventana de cancelación elegante
+  const [modalCancelacion, setModalCancelacion] = useState<any>({ 
+    isOpen: false, 
+    reserva: null, 
+    devuelveCredito: false, 
+    titulo: "", 
+    mensaje: "" 
+  });
 
   useEffect(() => {
     cargarDatos();
@@ -57,23 +66,31 @@ export default function DashboardClienta() {
     return (fechaClase.getTime() - new Date().getTime()) / (1000 * 60 * 60);
   };
 
-  const cancelarMiReserva = async (reserva: any) => {
-    // Calculamos si faltan más o menos de 12 horas
+  const abrirModalCancelacion = (reserva: any) => {
     const horasFaltantes = calcularHorasFaltantes(reserva.claseInfo.dia, reserva.claseInfo.horario);
     const devuelveCredito = horasFaltantes >= 12;
 
-    const mensaje = devuelveCredito 
-    ? `¿Deseas cancelar tu clase de ${reserva.claseInfo.nombre}?\n\nAl cancelar con más de 12 horas de anticipación, tu crédito será devuelto a tu cuenta inmediatamente.` 
-    : `⚠️ PENALIZACIÓN POR TIEMPO ⚠️\n\nFaltan menos de 12 horas para tu clase. Si cancelas ahora, perderás tu lugar y NO se te devolverá el crédito.\n\n¿Confirmas que deseas cancelar?`;
+    setModalCancelacion({
+      isOpen: true,
+      reserva,
+      devuelveCredito,
+      titulo: devuelveCredito ? "¿Cancelar Reserva?" : "Penalización por Tiempo",
+      mensaje: devuelveCredito 
+        ? `¿Deseas cancelar tu clase de ${reserva.claseInfo.nombre}?\n\nAl cancelar con más de 12 horas de anticipación, tu crédito será devuelto a tu cuenta inmediatamente.` 
+        : `Faltan menos de 12 horas para tu clase. Si cancelas ahora, perderás tu lugar y NO se te devolverá el crédito.\n\n¿Confirmas que deseas cancelar de todos modos?`
+    });
+  };
 
-    if (!window.confirm(mensaje)) return;
+  const confirmarCancelacion = async () => {
+    const { reserva, devuelveCredito } = modalCancelacion;
+    if (!reserva) return;
 
+    setModalCancelacion({ ...modalCancelacion, isOpen: false }); // Cerramos la ventana modal
     setIsLoading(true);
+
     try {
-      // 1. Borramos la reserva (liberamos la cama)
       await supabase.from("reservas").delete().eq("id", reserva.id);
 
-      // 2. SOLO devolvemos el crédito si cumplió la regla de las 12 horas
       if (devuelveCredito && perfil) {
         const nuevosCreditos = perfil.creditos + 1;
         await supabase.from("perfiles").update({ creditos: nuevosCreditos }).eq("id", perfil.id);
@@ -81,9 +98,21 @@ export default function DashboardClienta() {
       }
 
       setMisReservas(misReservas.filter(r => r.id !== reserva.id));
-      alert(devuelveCredito ? "Clase cancelada. Tu crédito ha sido devuelto." : "Clase cancelada. No hubo devolución de crédito por política de 12 horas.");
+      
+      Swal.fire({
+        title: "Clase Cancelada",
+        text: devuelveCredito ? "Tu crédito ha sido devuelto automáticamente." : "No hubo devolución de crédito por política de 12 horas.",
+        icon: devuelveCredito ? "success" : "info",
+        confirmButtonColor: "#059669"
+      });
+      
     } catch (error) {
-      alert("Hubo un error al cancelar. Intenta de nuevo.");
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un error al cancelar. Intenta de nuevo.",
+        icon: "error",
+        confirmButtonColor: "#dc2626"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -223,7 +252,7 @@ export default function DashboardClienta() {
                     </div>
 
                     <button 
-                      onClick={() => cancelarMiReserva(reserva)}
+                      onClick={() => abrirModalCancelacion(reserva)}
                       className="w-full sm:w-auto px-5 py-3 border border-red-200 text-red-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer text-center"
                     >
                       Cancelar Clase
@@ -237,6 +266,41 @@ export default function DashboardClienta() {
         {/* --- FIN: LISTA DE CLASES LIMPIA --- */}
       </div>
     </div>
+    {/* --- INICIO: MODAL DE CANCELACIÓN ELEGANTE --- */}
+    {modalCancelacion.isOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in p-4">
+        <div className="bg-card w-full max-w-sm rounded-[2rem] shadow-2xl border border-border overflow-hidden text-center p-8 transform transition-all animate-in zoom-in-95 duration-200">
+          
+          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-6 shadow-inner border ${modalCancelacion.devuelveCredito ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+            <span className="text-3xl">{modalCancelacion.devuelveCredito ? '✨' : '⚠️'}</span>
+          </div>
+          
+          <h3 className={`font-serif text-2xl mb-3 ${modalCancelacion.devuelveCredito ? 'text-foreground' : 'text-red-600'}`}>
+            {modalCancelacion.titulo}
+          </h3>
+          
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line mb-8">
+            {modalCancelacion.mensaje}
+          </p>
+          
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={confirmarCancelacion} 
+              className={`w-full py-4 rounded-xl text-xs uppercase tracking-widest font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 ${modalCancelacion.devuelveCredito ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+            >
+              Sí, Cancelar Clase
+            </button>
+            <button 
+              onClick={() => setModalCancelacion({ ...modalCancelacion, isOpen: false })} 
+              className="w-full py-4 rounded-xl text-xs uppercase tracking-widest font-bold text-muted-foreground bg-secondary/50 hover:bg-secondary border border-transparent hover:border-border transition-all cursor-pointer"
+            >
+              Conservar mi lugar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {/* --- FIN: MODAL DE CANCELACIÓN ELEGANTE --- */}
     
     {/* AQUÍ INYECTAMOS EL MODAL FLOTANTE QUE YA TENÍAS */}
     <ModalReserva 

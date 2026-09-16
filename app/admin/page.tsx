@@ -3,7 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import { DollarSign, Users, CalendarCheck, Gift, Search, AlertTriangle, UserPlus, MessageCircle, CheckCircle, Check, CreditCard, ShieldAlert, List, Star, Zap, Clock, Calendar, X, Inbox, ArrowLeft } from "lucide-react";
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("clientas"); // clientas, reservas, horarios
   
@@ -46,14 +48,14 @@ const obtenerDias = () => [...Array(7)].map((_, i) => {
   
  // --- INICIO: CATÁLOGO DE PAQUETES ---
  const PAQUETES = [
-  { id: 1, nombre: "Clase suelta", clases: 1, precio: 240 },
-  { id: 2, nombre: "Paquete de 8 clases", clases: 8, precio: 1200 },
-  { id: 3, nombre: "Paquete de 12 clases", clases: 12, precio: 1680 },
-  { id: 4, nombre: "Paquete de 16 clases", clases: 16, precio: 2160 },
-  { id: 5, nombre: "Paquete de 20 clases", clases: 20, precio: 2640 },
-  { id: 6, nombre: "Clases ilimitadas", clases: 30, precio: 3040 },
-  { id: 7, nombre: "Usuaria TotalPass", clases: 1, precio: 0 },
-  { id: 8, nombre: "Clase de Prueba", clases: 1, precio: 0 },
+  { id: 1, nombre: "Clase suelta", clases: 1, precio: 240, dias: 7 },
+  { id: 2, nombre: "Paquete de 8 clases", clases: 8, precio: 1200, dias: 30 },
+  { id: 3, nombre: "Paquete de 12 clases", clases: 12, precio: 1680, dias: 30 },
+  { id: 4, nombre: "Paquete de 16 clases", clases: 16, precio: 2160, dias: 30 },
+  { id: 5, nombre: "Paquete de 20 clases", clases: 20, precio: 2640, dias: 45 },
+  { id: 6, nombre: "Clases ilimitadas", clases: 30, precio: 3040, dias: 60 },
+  { id: 7, nombre: "Usuaria TotalPass", clases: 1, precio: 0, dias: 7 },
+  { id: 8, nombre: "Clase de Prueba", clases: 1, precio: 0, dias: 7 },
 ];
 
 // Función de Inteligencia Financiera (Calcula exacto por clienta)
@@ -113,14 +115,26 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
   const [deudas, setDeudas] = useState<any[]>([]); // MEMORIA DE DEUDAS
 
   const saldarDeuda = async (deudaId: string, nombre: string) => {
-    if (!confirm(`¿Confirmas que ${nombre} ya te transfirió/pagó el paquete?`)) return;
+    const confirmacion = await Swal.fire({
+      title: "¿Confirmas el pago?",
+      text: `¿Confirmas que ${nombre} ya te transfirió o pagó en efectivo?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#059669", // Verde
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, ya recibí el dinero",
+      cancelButtonText: "Cancelar"
+    });
+    
+    if (!confirmacion.isConfirmed) return;
+
     setIsLoading(true);
     try {
       await supabase.from("transacciones").update({ estatus_pago: "Pagado" }).eq("id", deudaId);
       setDeudas(deudas.filter(d => d.id !== deudaId));
-      alert("¡Deuda saldada con éxito! El dinero ya está en la cuenta.");
+      Swal.fire("¡Saldado!", "La deuda ha sido marcada como pagada.", "success");
     } catch (error) {
-      alert("Error al actualizar el pago.");
+      Swal.fire("Error", "No se pudo actualizar el pago.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -149,23 +163,38 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
         setDeudas(prev => [...prev, nuevaTx[0]]);
       }
 
-      // 2. Sumarle los créditos automáticamente
+      // 2. Sumarle los créditos y calcular caducidad automáticamente
       const nuevosCreditos = (clienteVenta.creditos || 0) + paqueteSeleccionado.clases;
+      
+      const nuevaFecha = new Date();
+      nuevaFecha.setDate(nuevaFecha.getDate() + (paqueteSeleccionado.dias || 30));
+      const fechaExpiracionSQL = nuevaFecha.toISOString().split('T')[0];
+
       const { error: errorCreditos } = await supabase
         .from("perfiles")
-        .update({ creditos: nuevosCreditos })
+        .update({ creditos: nuevosCreditos, fecha_expiracion: fechaExpiracionSQL })
         .eq("id", clienteVenta.id);
 
       if (errorCreditos) throw errorCreditos;
 
       // 3. Actualizar la pantalla sin recargar la página
-      setClientes(clientes.map(c => c.id === clienteVenta.id ? { ...c, creditos: nuevosCreditos } : c));
+      setClientes(clientes.map(c => c.id === clienteVenta.id ? { ...c, creditos: nuevosCreditos, fecha_expiracion: fechaExpiracionSQL } : c));
       
-      alert(`✅ ¡Venta registrada exitosamente!\nSe sumaron ${paqueteSeleccionado.clases} créditos a ${clienteVenta.nombre}.`);
-      setIsVentaModalOpen(false);
+      setIsVentaModalOpen(false); // Cerramos el modal tuyo primero
+      Swal.fire({
+        title: "¡Venta Exitosa!",
+        text: `Se sumaron ${paqueteSeleccionado.clases} créditos a ${clienteVenta.nombre}.`,
+        icon: "success",
+        confirmButtonColor: "#059669"
+      });
     } catch (error) {
       console.error("Error en la venta:", error);
-      alert("Hubo un error al procesar la venta. Revisa la conexión.");
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un error al procesar la venta. Revisa la conexión.",
+        icon: "error",
+        confirmButtonColor: "#dc2626"
+      });
     } finally {
       setIsProcesandoVenta(false);
     }
@@ -393,39 +422,44 @@ useEffect(() => {
   };
 // --- INICIO: SISTEMA DE REFERIDOS ---
 const premiarReferido = async (whatsappReferente: string, clientaId: string, nombreClienta: string) => {
-  const mensajeAntifraude = `🚨 ALTO: PREVENCIÓN DE FRAUDE 🚨\n\n¿Estás 100% segura de que ${nombreClienta} ya PAGÓ su primer paquete de clases?\n\n⚠️ REGLA: NUNCA des este premio si la persona solo vino a su clase de prueba gratis o si aún no hace la transferencia.\n\nSi ya tienes el dinero en tu cuenta, haz clic en Aceptar para darle 1 clase gratis a su amiga.`;
+  const confirmacion = await Swal.fire({
+    title: "🚨 PREVENCIÓN DE FRAUDE 🚨",
+    text: `¿Estás 100% segura de que ${nombreClienta} ya PAGÓ su primer paquete?\n\nNunca des este premio si solo vino a su clase de prueba gratis.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#f59e0b", // Color ámbar
+    cancelButtonColor: "#6b7280",
+    confirmButtonText: "Sí, ya pagó. Aprobar Premio.",
+    cancelButtonText: "Cancelar"
+  });
   
-  if (!confirm(mensajeAntifraude)) return;
+  if (!confirmacion.isConfirmed) return;
 
   setIsLoading(true);
   try {
-    // 1. Buscar a la clienta que hizo la invitación
     const { data: referente } = await supabase.from("perfiles").select("*").eq("whatsapp", whatsappReferente).single();
 
     if (!referente) {
-      alert("No se encontró a ninguna clienta con ese número de WhatsApp. Tal vez lo escribió mal.");
+      Swal.fire("Error", "No se encontró a ninguna clienta con ese número de WhatsApp.", "error");
       setIsLoading(false);
       return;
     }
 
-    // 2. Sumarle el crédito a la que invitó
     const nuevosCreditos = (referente.creditos || 0) + 1;
     await supabase.from("perfiles").update({ creditos: nuevosCreditos }).eq("id", referente.id);
 
-    // 3. Marcar a la clienta nueva como "Ya premiada" para no dar el bono 2 veces
     const marcaPremiado = `¡PREMIADO! (${whatsappReferente})`;
     await supabase.from("perfiles").update({ referido_por: marcaPremiado }).eq("id", clientaId);
 
-    // 4. Actualizar la pantalla de Liliana
     setClientes(clientes.map(c => {
       if (c.id === referente.id) return { ...c, creditos: nuevosCreditos };
       if (c.id === clientaId) return { ...c, referido_por: marcaPremiado };
       return c;
     }));
 
-    alert(`¡Éxito! Se le regaló 1 crédito automáticamente a ${referente.nombre}.`);
+    Swal.fire("¡Premio Entregado!", `Se le regaló 1 clase a ${referente.nombre} exitosamente.`, "success");
   } catch (error) {
-    alert("Hubo un error al procesar el premio.");
+    Swal.fire("Error", "Hubo un error al procesar el premio.", "error");
   } finally {
     setIsLoading(false);
   }
@@ -462,10 +496,26 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
   };
 
   const eliminarClase = async (id: string) => {
-    if (!confirm("¿Segura que deseas eliminar esta clase?")) return;
+    const confirmacion = await Swal.fire({
+      title: "¿Eliminar clase?",
+      text: "Esta acción borrará la clase del calendario.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626", // Rojo
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar"
+    });
+    
+    if (!confirmacion.isConfirmed) return;
+
     const { error } = await supabase.from("clases").delete().eq("id", id);
-    if (error) alert("No se pudo eliminar la clase.");
-    else setClases(clases.filter(c => String(c.id) !== String(id)));
+    if (error) {
+      Swal.fire("Error", "No se pudo eliminar la clase.", "error");
+    } else {
+      setClases(clases.filter(c => String(c.id) !== String(id)));
+      Swal.fire({ title: "Eliminada", text: "La clase desapareció del calendario.", icon: "success", timer: 2000, showConfirmButton: false });
+    }
   };
 
   const cancelarReserva = async (reserva: any) => {
@@ -491,12 +541,20 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
       devuelveCredito = horasFaltantes >= 12;
     }
 
-    const mensaje = devuelveCredito 
-      ? `¿Cancelar reserva de ${reserva.nombre_cliente}?\n\n⏳ Faltan MÁS de 12 horas para la clase.\n✅ SE LE DEVOLVERÁ 1 crédito automáticamente a su cuenta.` 
-      : `¿Cancelar reserva de ${reserva.nombre_cliente}?\n\n⏳ Faltan MENOS de 12 horas (o ya pasó).\n❌ NO se le devolverá el crédito por política de cancelación tardía.`;
+    const confirmacion = await Swal.fire({
+      title: devuelveCredito ? "¿Devolver crédito?" : "⚠️ Cancelación Tardía",
+      text: devuelveCredito 
+        ? `Faltan MÁS de 12 horas. Al cancelar a ${reserva.nombre_cliente}, se le devolverá 1 crédito automáticamente a su cuenta.`
+        : `Faltan MENOS de 12 horas. Al cancelar a ${reserva.nombre_cliente}, NO se le devolverá el crédito por política del estudio.`,
+      icon: devuelveCredito ? "question" : "warning",
+      showCancelButton: true,
+      confirmButtonColor: devuelveCredito ? "#059669" : "#dc2626", // Verde si devuelve, rojo si castiga
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, cancelar clase",
+      cancelButtonText: "Regresar"
+    });
 
-    const confirmar = window.confirm(mensaje);
-    if (!confirmar) return;
+    if (!confirmacion.isConfirmed) return;
 
     setIsLoading(true);
     try {
@@ -601,8 +659,18 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
       return;
     }
 
-    const confirmar = window.confirm(`🚨 ADVERTENCIA: BOTÓN DE PÁNICO 🚨\n\n¿Estás 100% segura de cancelar TODAS las clases del ${diaSeleccionado}?\n\nEl sistema:\n1. Borrará la agenda del día.\n2. Devolverá automáticamente 1 crédito a cada alumna que ya había reservado.\n\nEsta acción NO se puede deshacer.`);
-    if (!confirmar) return;
+    const confirmacion = await Swal.fire({
+      title: "🚨 BOTÓN DE PÁNICO 🚨",
+      text: `¿Estás 100% segura de cancelar TODAS las clases del ${diaSeleccionado}?\n\nEl sistema borrará la agenda del día y devolverá 1 crédito a cada alumna afectada. Esta acción NO se puede deshacer.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626", // Rojo peligro
+      cancelButtonColor: "#6b7280", // Gris
+      confirmButtonText: "Sí, cancelar TODO el día",
+      cancelButtonText: "Abortar"
+    });
+    
+    if (!confirmacion.isConfirmed) return;
 
     setIsLoading(true);
 
@@ -991,20 +1059,13 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   </td>
                   <td className="p-5 text-center"><span className="text-3xl font-sans font-light tracking-tight text-primary">{cliente.creditos || 0}</span></td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        {/* BOTÓN PRINCIPAL DE VENTAS */}
+                    <div className="flex justify-end items-center gap-2">
                         <button 
                           onClick={() => { setClienteVenta(cliente); setIsVentaModalOpen(true); }}
-                          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
                         >
                           <CreditCard size={14}/> Vender
                         </button>
-                        
-                        {/* AJUSTE MANUAL SECUNDARIO */}
-                        <div className="flex bg-secondary/20 rounded border border-border">
-                          <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, -1)} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-lg cursor-pointer" title="Restar crédito manual">-</button>
-                          <button onClick={() => modificarCreditos(cliente.id, cliente.creditos || 0, 1)} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors text-lg cursor-pointer" title="Sumar crédito manual">+</button>
-                          </div>
                       </div>
                     </td>
                   </tr>

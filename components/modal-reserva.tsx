@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { ModalLegal } from "./modal-legal"; // <-- 1. Importamos al fantasma
+import Swal from 'sweetalert2';
 
 export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onReservaExitosa }: any) {
   const [modalLegal, setModalLegal] = useState<"terminos" | "privacidad" | "cancelaciones" | "">(""); // <-- 2. Memoria del clic
@@ -43,10 +44,11 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
   };
 
   const guardarPerfil = async () => {
-    if (!nombreInput || !whatsappInput) return alert("Ingresa tu nombre y WhatsApp.");
+    if (!nombreInput || !whatsappInput) {
+      return Swal.fire({ title: "Faltan datos", text: "Por favor ingresa tu nombre y WhatsApp.", icon: "warning", confirmButtonColor: "#f59e0b" });
+    }
     setIsActualizando(true);
     
-    // Mandamos el referido. Si está vacío, mandamos null para no ensuciar la base de datos.
     const { error } = await supabase.from("perfiles").update({ 
       nombre: nombreInput, 
       whatsapp: whatsappInput,
@@ -54,26 +56,30 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
     }).eq("id", perfil.id);
     
     setIsActualizando(false);
-    if (error) alert("Error al guardar tus datos.");
-    else onActualizarPerfil({ ...perfil, nombre: nombreInput, whatsapp: whatsappInput, referido_por: referidoInput });
+    if (error) {
+      Swal.fire({ title: "Error", text: "No pudimos guardar tus datos.", icon: "error", confirmButtonColor: "#dc2626" });
+    } else {
+      onActualizarPerfil({ ...perfil, nombre: nombreInput, whatsapp: whatsappInput, referido_por: referidoInput });
+      Swal.fire({ title: "¡Listo!", text: "Tus datos se guardaron correctamente.", icon: "success", confirmButtonColor: "#059669", timer: 2000, showConfirmButton: false });
+    }
   };
 
   const confirmarReserva = async () => {
-    if (!claseSeleccionada) return alert("Selecciona un horario.");
-    if (perfil.creditos <= 0) return alert("No tienes créditos suficientes.");
+    if (!claseSeleccionada) return Swal.fire({ title: "Aviso", text: "Por favor selecciona un horario primero.", icon: "info", confirmButtonColor: "#059669" });
+    if (perfil.creditos <= 0) return Swal.fire({ title: "Sin créditos", text: "No tienes créditos suficientes para reservar.", icon: "warning", confirmButtonColor: "#f59e0b" });
 
     const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
     const maxCamas = claseElegida?.cupo_max || 6;
     const ocupadas = reservasActivas.filter(r => String(r.clase_id) === String(claseSeleccionada)).length;
 
-    if (ocupadas >= maxCamas) return alert("Esta clase acaba de llenarse.");
+    if (ocupadas >= maxCamas) return Swal.fire({ title: "Clase Llena", text: "Alguien más acaba de tomar el último lugar.", icon: "error", confirmButtonColor: "#dc2626" });
 
     setIsSubmitting(true);
     const { error } = await supabase.from('reservas').insert([{ nombre_cliente: perfil.nombre, whatsapp: perfil.whatsapp, clase_id: claseSeleccionada }]);
     
     if (error) {
       setIsSubmitting(false);
-      return alert("Hubo un problema de conexión.");
+      return Swal.fire({ title: "Error", text: "Hubo un problema de conexión al reservar.", icon: "error", confirmButtonColor: "#dc2626" });
     }
 
     const nuevosCreditos = perfil.creditos - 1;
@@ -81,10 +87,10 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
     
     setIsSubmitting(false);
     onActualizarPerfil({ ...perfil, creditos: nuevosCreditos });
-    alert("¡Reserva confirmada con éxito!");
+    Swal.fire({ title: "¡Reserva Confirmada!", text: "Tu cama te está esperando.", icon: "success", confirmButtonColor: "#059669" });
     // --- INICIO: ENVIAR CORREO A LA TÍA ---
     try {
-      const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
+      // Ya no declaramos claseElegida porque ya la calculamos arriba
       await fetch('/api/notificacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,9 +120,10 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
     }]);
     setIsSubmitting(false);
 
-    if (error) alert("Error al unirte a la lista.");
-    else {
-      alert("¡Listo! Estás en la fila de espera.");
+    if (error) {
+      Swal.fire({ title: "Error", text: "No pudimos agregarte a la lista de espera.", icon: "error", confirmButtonColor: "#dc2626" });
+    } else {
+      Swal.fire({ title: "¡Estás en la fila!", text: "Te avisaremos por WhatsApp si se libera un lugar.", icon: "success", confirmButtonColor: "#059669" });
       setClaseSeleccionada("");
       onClose();
     }
@@ -134,7 +141,23 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
   };
 
   const clasesDelDia = clasesDisponibles
-    .filter((c) => c.dia && c.dia.startsWith(diaSeleccionado))
+    .filter((c) => {
+      if (!c.dia || !c.dia.startsWith(diaSeleccionado)) return false;
+      
+      // CANDADO DE TIEMPO REAL: Si seleccionaron "Hoy", ocultar las clases que ya pasaron
+      const hoy = obtenerFechaLocal(new Date());
+      if (c.dia === hoy) {
+        const ahora = new Date();
+        const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+        const minutosClase = convertirAMinutos(c.horario);
+        
+        // Solo mostrar la clase si todavía faltan minutos para que empiece
+        return minutosClase > minutosActuales;
+      }
+      
+      // Si es un día en el futuro, mostrar todas las clases
+      return true;
+    })
     .sort((a, b) => convertirAMinutos(a.horario) - convertirAMinutos(b.horario));
 
   return (
