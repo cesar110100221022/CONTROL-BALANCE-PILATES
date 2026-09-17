@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Usamos la variable de Vercel, o localhost si estás en tu computadora
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '[https://controlbalancestudio.com](https://controlbalancestudio.com)';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://controlbalancestudio.com';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
