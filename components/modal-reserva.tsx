@@ -250,9 +250,15 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
               // --- INICIO: INTERCEPTOR DE VENTAS (0 CRÉDITOS) ---
               if (claseSeleccionada && perfil.creditos <= 0) {
                 return (
-                  <button onClick={() => window.open("https://wa.me/528124697382?text=Hola%20Liliana,%20ya%20no%20tengo%20cr%C3%A9ditos%20en%20mi%20cuenta.%20Me%20gustar%C3%ADa%20comprar%20un%20paquete%20nuevo.", "_blank")} className="w-full bg-emerald-600 text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest transition-opacity hover:bg-emerald-700 cursor-pointer shadow-lg rounded-md">
+                  <a 
+                    href="https://wa.me/528124697382?text=Hola%20Liliana,%20ya%20no%20tengo%20cr%C3%A9ditos%20en%20mi%20cuenta.%20Me%20gustar%C3%ADa%20comprar%20un%20paquete%20nuevo." 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={() => onClose()}
+                    className="w-full block text-center bg-emerald-600 text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest transition-opacity hover:bg-emerald-700 cursor-pointer shadow-lg rounded-md no-underline"
+                  >
                     💬 Sin créditos: Comprar Paquete
-                  </button>
+                  </a>
                 );
               }
               // --- FIN: INTERCEPTOR DE VENTAS ---
