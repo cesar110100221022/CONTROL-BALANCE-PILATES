@@ -89,7 +89,7 @@ export default function DashboardClienta() {
     setModalCancelacion({ ...modalCancelacion, isCanceling: true });
 
     try {
-      // 1. ELIMINACIÓN DE LA RESERVA EN SUPABASE
+      // 1. ELIMINACIÓN DE LA RESERVA (Esto siempre funcionó bien)
       const { error: errorDelete } = await supabase
         .from("reservas")
         .delete()
@@ -99,34 +99,21 @@ export default function DashboardClienta() {
 
       let creditosFinales = perfil.creditos;
 
-      // 2. ACTUALIZACIÓN DE CRÉDITO
+      // 2. LA FÓRMULA MÁGICA: Le ordenamos a Supabase que haga el trabajo pesado
       if (devuelveCredito && perfil) {
-        const { data: perfilNube, error: errorLectura } = await supabase
-          .from("perfiles")
-          .select("creditos")
-          .eq("id", perfil.id)
-          .single();
-
-        if (errorLectura || !perfilNube) throw new Error("No se pudo leer tu saldo actual.");
-
-        const nuevosCreditos = Number(perfilNube.creditos) + 1; 
         
-        const { error: errorUpdate } = await supabase
-          .from("perfiles")
-          .update({ creditos: nuevosCreditos })
-          .eq("id", perfil.id);
+        // Llamamos a la función interna que acabamos de crear en el Paso 1
+        const { error: errorRPC } = await supabase.rpc('devolver_credito', { p_id: perfil.id });
 
-        if (errorUpdate) throw new Error("Fallo al guardar: " + errorUpdate.message);
+        if (errorRPC) throw new Error("Fallo al devolver el crédito: " + errorRPC.message);
         
-        creditosFinales = nuevosCreditos;
-        
-        // SINCRONIZACIÓN DIRECTA (Sin preguntar a la base de datos de nuevo)
-        setPerfil({ ...perfil, creditos: nuevosCreditos });
+        // Calculamos visualmente para la pantalla sin consultar la base de datos
+        creditosFinales = perfil.creditos + 1;
+        setPerfil({ ...perfil, creditos: creditosFinales });
       }
 
-      // 3. ACTUALIZACIÓN DE LA LISTA DE CLASES (Borramos la clase cancelada de la pantalla)
+      // 3. LIMPIEZA VISUAL DE LA PANTALLA
       setMisReservas(misReservas.filter(r => r.id !== reserva.id));
-      
       setModalCancelacion({ ...modalCancelacion, isOpen: false, isCanceling: false });
       
       Swal.fire({
@@ -153,9 +140,7 @@ export default function DashboardClienta() {
             }
           })
         });
-      } catch (error) {
-        console.error("Error correo:", error);
-      }
+      } catch (error) {}
 
     } catch (error: any) {
       console.error("Fallo crítico:", error);
