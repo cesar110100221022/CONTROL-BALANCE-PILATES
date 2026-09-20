@@ -89,38 +89,38 @@ export default function DashboardClienta() {
     setModalCancelacion({ ...modalCancelacion, isCanceling: true });
 
     try {
-      // 🛡️ SOLUCIÓN 1: Exige verificación al borrar; si falla, se detiene
-      const { error: errorDelete } = await supabase
+      // 1. ELIMINACIÓN ESTRICTA
+      const { data: deletedData, error: errorDelete } = await supabase
         .from("reservas")
         .delete()
-        .eq("id", reserva.id);
+        .eq("id", reserva.id)
+        .select();
         
-      if (errorDelete) throw new Error("No se pudo borrar la clase: " + errorDelete.message);
+      if (errorDelete) throw new Error("No se pudo borrar: " + errorDelete.message);
+      if (!deletedData || deletedData.length === 0) throw new Error("Supabase bloqueó la acción (Revisar políticas RLS de Reservas).");
 
-      // 🛡️ SOLUCIÓN 2: Operación matemática estricta y confirmación de base de datos
+      let creditosFinales = perfil.creditos;
+
+      // 2. ACTUALIZACIÓN MATEMÁTICA Y ESTRICTA DE CRÉDITOS
       if (devuelveCredito && perfil) {
-        // Garantiza que sume números reales (ej. 17 + 1 = 18) y no concatene texto ("17" + 1 = "171")
         const nuevosCreditos = Number(perfil.creditos) + 1; 
         
-        // .select() obliga a Supabase a devolver el registro actualizado
         const { data: dataPerfil, error: errorUpdate } = await supabase
           .from("perfiles")
           .update({ creditos: nuevosCreditos })
           .eq("id", perfil.id)
           .select();
 
-        // Si la base de datos rechaza la actualización, lanza error de inmediato
         if (errorUpdate) throw new Error("Error en Supabase: " + errorUpdate.message);
         if (!dataPerfil || dataPerfil.length === 0) {
-           throw new Error("Bloqueo de permisos: Supabase rechazó guardar el crédito.");
+           throw new Error("Supabase bloqueó la devolución de crédito (Revisar políticas RLS de Perfiles).");
         }
-
-        // 🛡️ SOLUCIÓN 3: La pantalla SOLO cambia a 18 si la base de datos confirmó el guardado
-        setPerfil({ ...perfil, creditos: nuevosCreditos });
+        
+        creditosFinales = nuevosCreditos;
       }
 
-      // Elimina la tarjeta de la clase de la pantalla
-      setMisReservas(misReservas.filter(r => r.id !== reserva.id));
+      // 3. OBLIGAR A LA PANTALLA A LEER LA BASE DE DATOS (Cero mentiras visuales)
+      await cargarDatos();
       
       setModalCancelacion({ ...modalCancelacion, isOpen: false, isCanceling: false });
       
@@ -131,7 +131,7 @@ export default function DashboardClienta() {
         confirmButtonColor: "#059669"
       });
 
-      // 🛡️ SOLUCIÓN 4: Ruta corregida a /api/notificacion para mandar el correo rojo a tu tía
+      // 4. DISPARADOR DE CORREO ROJO (Con respaldo estructural)
       try {
         await fetch('/api/notificacion', {
           method: 'POST',
@@ -144,8 +144,15 @@ export default function DashboardClienta() {
               dia: reserva.claseInfo?.dia || "Día",
               clase: reserva.claseInfo?.nombre || "Clase",
               horario: reserva.claseInfo?.horario || "Horario",
-              creditosRestantes: devuelveCredito ? (Number(perfil.creditos) + 1) : perfil.creditos
-            }
+              creditosRestantes: creditosFinales
+            },
+            // Datos directos por compatibilidad con el correo
+            nombreCliente: perfil?.nombre || "Clienta",
+            telefono: perfil?.whatsapp || "",
+            dia: reserva.claseInfo?.dia || "Día",
+            clase: reserva.claseInfo?.nombre || "Clase",
+            horario: reserva.claseInfo?.horario || "Horario",
+            creditosRestantes: creditosFinales
           })
         });
       } catch (error) {
@@ -156,9 +163,8 @@ export default function DashboardClienta() {
       console.error("Fallo crítico en cancelación:", error);
       setModalCancelacion({ ...modalCancelacion, isCanceling: false });
       
-      // Muestra en pantalla el motivo exacto por el cual falló la base de datos
       Swal.fire({
-        title: "Error Interno",
+        title: "Error de Permisos",
         text: error.message || "Hubo un error al devolver el crédito. Intenta de nuevo.",
         icon: "error",
         confirmButtonColor: "#dc2626"
