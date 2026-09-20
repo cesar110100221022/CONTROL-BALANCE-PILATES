@@ -89,7 +89,7 @@ export default function DashboardClienta() {
     setModalCancelacion({ ...modalCancelacion, isCanceling: true });
 
     try {
-      // 1. ELIMINACIÓN DE LA RESERVA
+      // 1. ELIMINACIÓN DE LA RESERVA EN SUPABASE
       const { error: errorDelete } = await supabase
         .from("reservas")
         .delete()
@@ -99,7 +99,7 @@ export default function DashboardClienta() {
 
       let creditosFinales = perfil.creditos;
 
-      // 2. ACTUALIZACIÓN DE CRÉDITO Y CONFESIÓN
+      // 2. ACTUALIZACIÓN DE CRÉDITO
       if (devuelveCredito && perfil) {
         const { data: perfilNube, error: errorLectura } = await supabase
           .from("perfiles")
@@ -107,29 +107,26 @@ export default function DashboardClienta() {
           .eq("id", perfil.id)
           .single();
 
-        // Agregamos esta validación de seguridad para que el editor deje de marcar rojo
         if (errorLectura || !perfilNube) throw new Error("No se pudo leer tu saldo actual.");
 
-        // Ahora TypeScript sabe que es 100% seguro leer .creditos
-        const saldoReal = Number(perfilNube.creditos);
-        const nuevosCreditos = saldoReal + 1; 
+        const nuevosCreditos = Number(perfilNube.creditos) + 1; 
         
-        // Ordenamos guardar el nuevo saldo
-        const { data: dataPerfil, error: errorUpdate } = await supabase
+        const { error: errorUpdate } = await supabase
           .from("perfiles")
           .update({ creditos: nuevosCreditos })
-          .eq("id", perfil.id)
-          .select();
-
-        // 🔥 LA CONFESIÓN: Obligamos a Supabase a mostrarnos qué hizo 🔥
-        alert("CONFESIÓN DE SUPABASE:\n\n" + JSON.stringify(dataPerfil));
+          .eq("id", perfil.id);
 
         if (errorUpdate) throw new Error("Fallo al guardar: " + errorUpdate.message);
         
         creditosFinales = nuevosCreditos;
+        
+        // SINCRONIZACIÓN DIRECTA (Sin preguntar a la base de datos de nuevo)
+        setPerfil({ ...perfil, creditos: nuevosCreditos });
       }
 
-      await cargarDatos();
+      // 3. ACTUALIZACIÓN DE LA LISTA DE CLASES (Borramos la clase cancelada de la pantalla)
+      setMisReservas(misReservas.filter(r => r.id !== reserva.id));
+      
       setModalCancelacion({ ...modalCancelacion, isOpen: false, isCanceling: false });
       
       Swal.fire({
@@ -156,7 +153,9 @@ export default function DashboardClienta() {
             }
           })
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error("Error correo:", error);
+      }
 
     } catch (error: any) {
       console.error("Fallo crítico:", error);
