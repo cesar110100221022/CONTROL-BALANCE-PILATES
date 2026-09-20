@@ -101,12 +101,16 @@ export default function DashboardClienta() {
 
       // 2. ACTUALIZACIÓN DE CRÉDITO Y CONFESIÓN
       if (devuelveCredito && perfil) {
-        const { data: perfilNube } = await supabase
+        const { data: perfilNube, error: errorLectura } = await supabase
           .from("perfiles")
           .select("creditos")
           .eq("id", perfil.id)
           .single();
 
+        // Agregamos esta validación de seguridad para que el editor deje de marcar rojo
+        if (errorLectura || !perfilNube) throw new Error("No se pudo leer tu saldo actual.");
+
+        // Ahora TypeScript sabe que es 100% seguro leer .creditos
         const saldoReal = Number(perfilNube.creditos);
         const nuevosCreditos = saldoReal + 1; 
         
