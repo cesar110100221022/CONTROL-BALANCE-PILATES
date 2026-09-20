@@ -139,7 +139,7 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
       // --- INICIO: AVISO DE FILA DE ESPERA AL ADMIN ---
       try {
         const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
-        await fetch('/api/send-email', { // O el nombre que le hayas puesto a tu archivo route.ts
+        await fetch('/api/notificacion', { // O el nombre que le hayas puesto a tu archivo route.ts
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
