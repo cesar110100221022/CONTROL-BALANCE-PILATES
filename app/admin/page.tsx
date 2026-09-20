@@ -50,10 +50,10 @@ const obtenerDias = () => [...Array(7)].map((_, i) => {
  const PAQUETES = [
   { id: 1, nombre: "Clase suelta", clases: 1, precio: 240, dias: 7 },
   { id: 2, nombre: "Paquete de 8 clases", clases: 8, precio: 1200, dias: 30 },
-  { id: 3, nombre: "Paquete de 12 clases", clases: 12, precio: 1680, dias: 30 },
-  { id: 4, nombre: "Paquete de 16 clases", clases: 16, precio: 2160, dias: 30 },
-  { id: 5, nombre: "Paquete de 20 clases", clases: 20, precio: 2640, dias: 45 },
-  { id: 6, nombre: "Clases ilimitadas", clases: 30, precio: 3040, dias: 60 },
+  { id: 3, nombre: "Paquete de 12 clases", clases: 12, precio: 1780, dias: 30 },
+  { id: 4, nombre: "Paquete de 16 clases", clases: 16, precio: 2280, dias: 30 },
+  { id: 5, nombre: "Paquete de 20 clases", clases: 20, precio: 2780, dias: 45 },
+  { id: 6, nombre: "Clases ilimitadas", clases: 30, precio: 3200, dias: 60 },
   { id: 7, nombre: "Usuaria TotalPass", clases: 1, precio: 0, dias: 7 },
   { id: 8, nombre: "Clase de Prueba", clases: 1, precio: 0, dias: 7 },
 ];
@@ -180,6 +180,10 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
       // 3. Actualizar la pantalla sin recargar la página
       setClientes(clientes.map(c => c.id === clienteVenta.id ? { ...c, creditos: nuevosCreditos, fecha_expiracion: fechaExpiracionSQL } : c));
       
+      // 👇 AGREGAR ESTO: Obligamos a las tarjetas de finanzas a leer el nuevo ingreso al instante
+      await cargarEstadisticas(); 
+      // 👆 FIN DEL AGREGADO
+
       setIsVentaModalOpen(false); // Cerramos el modal tuyo primero
       Swal.fire({
         title: "¡Venta Exitosa!",
