@@ -17,8 +17,9 @@ export function MethodSection() {
         {/* Contenedor de Imagen Estética */}
         <div className="aspect-[4/5] bg-muted/50 rounded-lg overflow-hidden relative shadow-xl">
           <img 
-            src="images/ismerai.jpg" 
+            src="/images/ismerai.jpg" // 🛡️ BLINDAJE DE RUTA: Diagonal agregada para que nunca se rompa
             alt="Pilates Reformer en Control Balance" 
+            loading="lazy" // 🛡️ RENDIMIENTO (SEO): Solo gasta datos cuando la usuaria baja a esta sección
             className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105" 
           />
         </div>

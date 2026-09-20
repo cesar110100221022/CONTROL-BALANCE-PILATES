@@ -96,7 +96,7 @@ export default function DashboardClienta() {
     setIsLoading(false);
   };
 
-  // --- INICIO: INTELIGENCIA DE TIEMPO BLINDADA (MONTERREY) ---
+  // --- INICIO: INTELIGENCIA DE TIEMPO BLINDADA (ESPEJO NEUTRAL MTY) ---
   const calcularHorasFaltantes = (dia: string, horario: string) => {
     const [year, month, day] = dia.split('-');
     const [horaMin, ampm] = horario.split(' ');
@@ -105,15 +105,24 @@ export default function DashboardClienta() {
     if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
     if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
     
-    // 1. Construimos la fecha de la clase 
-    const fechaClase = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), h, m);
+    // 1. Forzar a JavaScript a darnos los números exactos de Monterrey AHORA mismo
+    const formatter = new Intl.DateTimeFormat('en-US', { 
+      timeZone: 'America/Monterrey', 
+      year: 'numeric', month: 'numeric', day: 'numeric', 
+      hour: 'numeric', minute: 'numeric', second: 'numeric', 
+      hour12: false 
+    });
     
-    // 2. Obtenemos la hora actual exacta y forzada de Monterrey
-    const horaOficialString = new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" });
-    const horaOficialMonterrey = new Date(horaOficialString);
+    const partesMTY = formatter.formatToParts(new Date());
+    const mty: any = {};
+    partesMTY.forEach(p => mty[p.type] = p.value);
     
-    // 3. Calculamos la diferencia exacta
-    return (fechaClase.getTime() - horaOficialMonterrey.getTime()) / (1000 * 60 * 60);
+    // 2. Armamos ambas fechas como un "espejo" abstracto sin importar dónde esté el celular
+    const fechaActualMonterrey = new Date(mty.year, mty.month - 1, mty.day, mty.hour, mty.minute, mty.second);
+    const fechaDeLaClase = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), h, m, 0);
+    
+    // 3. Calculamos la diferencia matemáticamente perfecta
+    return (fechaDeLaClase.getTime() - fechaActualMonterrey.getTime()) / (1000 * 60 * 60);
   };
 
   const abrirModalCancelacion = (reserva: any) => {

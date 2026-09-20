@@ -1,17 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // <-- Agregamos useEffect
 import { ArrowRight } from "lucide-react";
-import { ModalLegal } from "./modal-legal"; // <-- Invocamos al fantasma
+import { ModalLegal } from "./modal-legal"; 
 
 export function Footer() {
-  // <-- Agregamos la memoria para saber qué documento abrir
   const [modalLegal, setModalLegal] = useState<"terminos" | "privacidad" | "cancelaciones" | "">(""); 
+  const [showMap, setShowMap] = useState(false); // <-- Memoria del mapa
 
+  // El truco: Esperamos 2.5 segundos antes de llamar a Google
+  useEffect(() => {
+    const timer = setTimeout(() => setShowMap(true), 2500);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <>
       {/* --- INICIO: FOOTER (PIE DE PÁGINA) --- */}
-      <footer className="relative z-10 bg-background/80 backdrop-blur-md border-t border-border py-12 px-6 md:px-12 mt-20">
+      <footer className="relative z-10 bg-background/80 backdrop-blur-md border-t border-border pt-12 pb-28 md:pb-12 px-6 md:px-12 mt-20">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-center text-center md:text-left">
           
           {/* 1. Marca y Logo */}
@@ -27,18 +32,22 @@ export function Footer() {
             <p>📍 Calz. Mauricio Fernández Garza 217, Del Valle, 66220 San Pedro Garza García, N.L.</p>
             <p>📞 +52 81 2469 7382</p>
             
-            <div className="w-full h-32 md:h-40 rounded-lg overflow-hidden border border-border shadow-sm">
-              <iframe
-                title="Ubicación de Control Balance Pilates"
-                src="https://maps.google.com/maps?q=Calz.+Mauricio+Fern%C3%A1ndez+Garza+217,+Del+Valle,+66220+San+Pedro+Garza+Garc%C3%ADa,+N.L.&output=embed"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="grayscale-[0.3] contrast-[0.9] hover:grayscale-0 transition-all duration-500"
-              />
+            <div className="w-full h-32 md:h-40 rounded-lg overflow-hidden border border-border shadow-sm bg-secondary/10 flex items-center justify-center">
+              {showMap ? (
+                <iframe
+                  title="Ubicación de Control Balance Pilates"
+                  src="https://maps.google.com/maps?q=Calz.+Mauricio+Fern%C3%A1ndez+Garza+217,+Del+Valle,+66220+San+Pedro+Garza+Garc%C3%ADa,+N.L.&output=embed"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="grayscale-[0.3] contrast-[0.9] hover:grayscale-0 transition-all duration-500 animate-in fade-in duration-1000"
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground animate-pulse font-medium tracking-widest uppercase">Cargando mapa...</span>
+              )}
             </div>
           </div>
 

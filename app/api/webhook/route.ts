@@ -52,26 +52,44 @@ export async function POST(request: Request) {
       if (creditosComprados > 0) {
          // Buscamos cuántos créditos y cuándo vencían antes
          const { data: perfilActual } = await supabase
-            .from('perfiles')
-            .select('creditos, fecha_expiracion') // <-- NUEVO: Leer expiración previa
-            .eq('id', userId)
-            .single();
+         .from('perfiles')
+         .select('creditos, fecha_expiracion, nombre, whatsapp') // <-- AGREGAMOS nombre y whatsapp
+         .eq('id', userId)
+         .single();
 
          const creditosAnteriores = perfilActual?.creditos || 0;
          const nuevosCreditos = creditosAnteriores + creditosComprados;
 
-         // 👇 NUEVO: Calcular nueva fecha de expiración 👇
-         const nuevaFecha = new Date();
+         // 🛡️ BLINDAJE 1: ZONA HORARIA DE MONTERREY PARA LA EXPIRACIÓN
+         const horaOficialString = new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" });
+         const nuevaFecha = new Date(horaOficialString);
          nuevaFecha.setDate(nuevaFecha.getDate() + diasVigencia);
-         const fechaExpiracionSQL = nuevaFecha.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+         const fechaExpiracionSQL = nuevaFecha.toISOString().split('T')[0];
 
-         // Le guardamos su nuevo saldo Y su fecha límite
+         // 1. ASIGNAR CRÉDITOS Y FECHA LÍMITE
          await supabase
             .from('perfiles')
-            .update({ creditos: nuevosCreditos, fecha_expiracion: fechaExpiracionSQL }) // <-- NUEVO: Inyectar fecha
+            .update({ creditos: nuevosCreditos, fecha_expiracion: fechaExpiracionSQL })
             .eq('id', userId);
          
-         console.log(`✅ ¡Éxito! Se sumaron ${creditosComprados} clases. Vencen el ${fechaExpiracionSQL}`);
+         // 🛡️ BLINDAJE 2: EL ESLABÓN PERDIDO CONTABLE (REGISTRAR EN FINANZAS)
+         // Stripe manda el monto en centavos, lo dividimos entre 100
+         const montoPagado = session.amount_total ? session.amount_total / 100 : 0; 
+         
+         // Asegúrate de que el nombre de la tabla ('transacciones' o 'pagos') sea el correcto
+         await supabase
+            .from('transacciones') 
+            .insert([{
+                cliente_nombre: perfilActual?.nombre || session.customer_details?.name || 'Venta Online',
+                cliente_whatsapp: perfilActual?.whatsapp || 'Sin registro', // <-- Columna de tu imagen
+                paquete_comprado: creditosComprados === 999 ? 'Ilimitadas' : `${creditosComprados} Clases`, // <-- Columna de tu imagen
+                monto_mxn: montoPagado, // <-- Columna de tu imagen
+                metodo_pago: 'Tarjeta',
+                estatus_pago: 'Pagado', // <-- Columna de tu imagen
+                fecha_pago: new Date(horaOficialString).toISOString() // <-- Columna de tu imagen
+            }]);
+
+         console.log(`✅ ¡Éxito! Se sumaron ${creditosComprados} clases y se registró $${montoPagado} en finanzas.`);
       }
     }
   }

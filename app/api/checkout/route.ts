@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       mode: 'payment',
       customer_email: userEmail || undefined,
       success_url: `${baseUrl}/dashboard?pago=exitoso`,
-      cancel_url: `${baseUrl}/dashboard?pago=cancelado`, // Te regreso al dashboard en vez de la página de inicio
+      cancel_url: `${baseUrl}/?pago=cancelado`, // <-- AJUSTE: La regresamos a la portada para que vea el mensaje de tranquilidad
       metadata: {
         userId: userId,
       },

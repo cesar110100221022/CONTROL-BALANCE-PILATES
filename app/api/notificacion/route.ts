@@ -40,8 +40,8 @@ export async function POST(request: Request) {
     }
 
     // 4. Enviamos el correo con el diseño adaptado
-    const data = await resend.emails.send({
-      from: 'Control Balance <onboarding@resend.dev>',
+    const { data, error } = await resend.emails.send({
+      from: 'Control Balance <onboarding@resend.dev>', // Recuerda cambiar esto cuando verifiques tu dominio en Resend
       to: [correoAdmin],
       subject: subject,
       html: `
@@ -66,10 +66,14 @@ export async function POST(request: Request) {
         </div>
       `,
     });
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error al enviar correo:", error);
-    return NextResponse.json({ error }, { status: 500 });
+    // 🛡️ BLINDAJE: Verificamos si Resend respondió con un error interno sin colapsar
+    if (error) {
+      console.error("⚠️ Resend bloqueó el envío:", error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+  } catch (error: any) {
+    // 🛡️ Atrapa fallos de red o caídas del servidor
+    console.error("🚨 Fallo crítico en el servidor de correos:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

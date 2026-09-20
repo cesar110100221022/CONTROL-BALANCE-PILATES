@@ -15,17 +15,18 @@ export default function AdminPage() {
   const [clases, setClases] = useState<any[]>([]);
   const [listaEspera, setListaEspera] = useState<any[]>([]);
 
- // Mini-función para obligar a usar la hora local de México
+ // 🛡️ BLINDAJE DE ZONA HORARIA: Obligar al servidor a leer la hora de Monterrey
  const obtenerFechaLocal = (fecha: Date) => {
-  const year = fecha.getFullYear();
-  const month = String(fecha.getMonth() + 1).padStart(2, '0');
-  const day = String(fecha.getDate()).padStart(2, '0');
+  const fechaOficial = new Date(fecha.toLocaleString("en-US", { timeZone: "America/Monterrey" }));
+  const year = fechaOficial.getFullYear();
+  const month = String(fechaOficial.getMonth() + 1).padStart(2, '0');
+  const day = String(fechaOficial.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
 // Generador dinámico de los próximos 7 días con fecha exacta local
 const obtenerDias = () => [...Array(7)].map((_, i) => {
-  const d = new Date();
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" }));
   d.setDate(d.getDate() + i);
   return {
     id: obtenerFechaLocal(d),
@@ -143,6 +144,7 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
   const procesarVenta = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clienteVenta) return;
+    if (isProcesandoVenta) return; // 🛡️ CANDADO ANTI-REBOTE: Bloquea doble clic accidental
     setIsProcesandoVenta(true);
 
     try {
@@ -166,9 +168,10 @@ const [filtroCeroCreditos, setFiltroCeroCreditos] = useState(false); // <-- AGRE
       // 2. Sumarle los créditos y calcular caducidad automáticamente
       const nuevosCreditos = (clienteVenta.creditos || 0) + paqueteSeleccionado.clases;
       
-      const nuevaFecha = new Date();
+      // 🛡️ BLINDAJE DE CADUCIDAD: Asegura que los días de vigencia se cuenten desde Monterrey
+      const nuevaFecha = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" }));
       nuevaFecha.setDate(nuevaFecha.getDate() + (paqueteSeleccionado.dias || 30));
-      const fechaExpiracionSQL = nuevaFecha.toISOString().split('T')[0];
+      const fechaExpiracionSQL = nuevaFecha.getFullYear() + "-" + String(nuevaFecha.getMonth() + 1).padStart(2, '0') + "-" + String(nuevaFecha.getDate()).padStart(2, '0');
 
       const { error: errorCreditos } = await supabase
         .from("perfiles")
@@ -318,8 +321,11 @@ const [estadisticas, setEstadisticas] = useState({
 
 const cargarEstadisticas = async () => {
   try {
-    const hoy = new Date().toISOString().split('T')[0];
-    const mesActual = hoy.substring(0, 7); // Extrae YYYY-MM
+    // 🛡️ BLINDAJE CONTABLE: Extraer el mes exacto en horario de Monterrey
+    const fechaOficial = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" }));
+    const year = fechaOficial.getFullYear();
+    const month = String(fechaOficial.getMonth() + 1).padStart(2, '0');
+    const mesActual = `${year}-${month}`; // Extrae YYYY-MM seguro
     
     // 1. Calcular Ingresos Reales y Paquete Estrella desde "transacciones"
     const { data: transacciones } = await supabase

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase'; // <-- Asegúrate de que esta ruta coincida con tu proyecto
+import Link from 'next/link'; // <-- AGREGAR ESTO: El motor de navegación ultra-rápida de Next.js
 
 export function StudioSection() {
   // 1. Memoria inteligente para el botón (por defecto manda a login)
@@ -51,13 +52,13 @@ export function StudioSection() {
         </div>
         {/* --- INICIO: BOTÓN DE CIERRE DE VENTA INTELIGENTE --- */}
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          <a 
+          <Link 
             href={rutaDestino} 
             className="inline-flex items-center justify-center gap-3 bg-primary text-primary-foreground px-8 py-4 rounded-full text-xs font-bold uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 cursor-pointer"
           >
             Vivir la Experiencia
             <span className="text-lg">→</span>
-          </a>
+          </Link>
         </div>
         {/* --- FIN: BOTÓN DE CIERRE DE VENTA INTELIGENTE --- */}
       </div>

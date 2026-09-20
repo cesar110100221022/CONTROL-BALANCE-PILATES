@@ -1,13 +1,15 @@
 import { HeroSection } from "../components/hero-section";
 import { MethodSection } from "../components/method-section";
 import { StudioSection } from "../components/studio-section";
+import { ExperienceSection } from "../components/experience-section";
 import { Footer } from "../components/footer-section";
 import { MessageCircle } from "lucide-react";
 
 // --- INICIO: METADATA Y SEO (PARA WHATSAPP E INSTAGRAM) ---
 export const metadata = {
+  metadataBase: new URL("https://controlbalancestudio.com"), // 🛡️ BLINDAJE SEO NEXT.JS
   title: "Control Balance | Pilates Reformer",
-  description: "Estudio boutique de Pilates Reformer. Respira, conecta y transforma tu cuerpo con nuestro método consciente. Reserva tu clase de prueba hoy.",
+  description: "Estudio boutique de Pilates Reformer en San Pedro Garza García (Del Valle). Grupos reducidos, camas premium y reeducación postural. Reserva tu primera clase.",
   openGraph: {
     title: "Control Balance | Pilates Reformer",
     description: "Movimiento consciente en un espacio diseñado para el silencio, la luz y la precisión. ¡Únete a nuestro estudio!",
@@ -31,6 +33,7 @@ export default function Page() {
       <HeroSection />
       <MethodSection />
       <StudioSection />
+      <ExperienceSection /> {/* <-- SECCIÓN NUEVA AGREGADA AQUÍ */}
       
       {/* --- INICIO: SECCIÓN DE EVENTOS PRIVADOS --- */}
       <section id="eventos" className="py-16 px-6 bg-secondary/30 border-y border-border my-12 animate-in fade-in duration-700">
@@ -48,7 +51,7 @@ export default function Page() {
           <a 
             href="https://wa.me/528124697382?text=¡Hola!%20Me%20encantaría%20recibir%20información%20para%20organizar%20un%20evento%20privado%20en%20Control%20Balance."
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer" // 🛡️ BLINDAJE ANTI-TABNABBING
             className="flex items-center gap-2 bg-foreground text-background px-8 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-lg"
           >
             <MessageCircle size={16} /> Cotizar mi Evento
