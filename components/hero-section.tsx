@@ -73,6 +73,9 @@ export function HeroSection() {
     if (!priceId) return;
 
     if (!perfil) {
+      // 🛒 BLINDAJE DE COMPRA: Guardamos el paquete que eligió en la memoria del navegador
+      localStorage.setItem("paquetePendienteStripe", priceId);
+      
       alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
       router.push("/login");
       return;
@@ -127,7 +130,7 @@ export function HeroSection() {
           <a href="#estudio" className="transition-colors duration-300 hover:text-foreground">El Estudio</a>
           <a href="#eventos" className="transition-colors duration-300 hover:text-foreground">Eventos</a>
           {perfil ? (
-            (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
+            (perfil.rol === 'admin') ? (
               <button onClick={() => router.push("/admin")} className="group flex items-center gap-3 text-amber-600 font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
                 <div className="w-8 h-8 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center text-amber-600 shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
                   <Crown size={14} strokeWidth={2} />

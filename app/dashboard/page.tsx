@@ -25,6 +25,48 @@ export default function DashboardClienta() {
   useEffect(() => {
     cargarDatos();
   }, []);
+  // 👇 AGREGAR ESTO: RECUPERACIÓN DE CARRITO STRIPE 👇
+  useEffect(() => {
+    // Solo se ejecuta cuando el perfil ya terminó de cargar
+    if (!perfil) return;
+    
+    // Busca si la clienta dejó un paquete pendiente antes de loguearse
+    const paquetePendiente = localStorage.getItem("paquetePendienteStripe");
+    
+    if (paquetePendiente) {
+      // 1. Lo borramos al instante para evitar que se ejecute dos veces (ciclo infinito)
+      localStorage.removeItem("paquetePendienteStripe");
+      
+      // 2. Le avisamos a la clienta para que no se asuste con el salto de pantalla
+      Swal.fire({
+        title: "¡Cuenta creada con éxito!",
+        text: "Te estamos redirigiendo al pago seguro de tu paquete...",
+        icon: "info",
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        timer: 2500
+      });
+
+      // 3. Disparamos la pasarela de Stripe automáticamente
+      fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId: paquetePendiente,
+          userId: perfil.id,
+          userEmail: perfil.email // Usamos el correo asociado a su perfil
+        }) 
+      })
+      .then(res => res.json())
+      .then(datos => {
+        if (datos.url) {
+          window.location.href = datos.url;
+        }
+      })
+      .catch(err => console.error("Error al recuperar compra:", err));
+    }
+  }, [perfil]);
+  // 👆 FIN DEL AGREGADO 👆
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -54,7 +96,7 @@ export default function DashboardClienta() {
     setIsLoading(false);
   };
 
-  // --- INICIO: INTELIGENCIA DE TIEMPO (12 HORAS) ---
+  // --- INICIO: INTELIGENCIA DE TIEMPO BLINDADA (MONTERREY) ---
   const calcularHorasFaltantes = (dia: string, horario: string) => {
     const [year, month, day] = dia.split('-');
     const [horaMin, ampm] = horario.split(' ');
@@ -63,8 +105,15 @@ export default function DashboardClienta() {
     if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
     if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
     
+    // 1. Construimos la fecha de la clase 
     const fechaClase = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), h, m);
-    return (fechaClase.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    
+    // 2. Obtenemos la hora actual exacta y forzada de Monterrey
+    const horaOficialString = new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" });
+    const horaOficialMonterrey = new Date(horaOficialString);
+    
+    // 3. Calculamos la diferencia exacta
+    return (fechaClase.getTime() - horaOficialMonterrey.getTime()) / (1000 * 60 * 60);
   };
 
   const abrirModalCancelacion = (reserva: any) => {
@@ -140,7 +189,10 @@ export default function DashboardClienta() {
             }
           })
         });
-      } catch (error) {}
+      } catch (error) {
+        // Log interno para que Vercel te avise si falla el proveedor de correos
+        console.error("⚠️ Aviso Interno: El correo de cancelación no se pudo enviar a la administradora.", error);
+      }
 
     } catch (error: any) {
       console.error("Fallo crítico:", error);

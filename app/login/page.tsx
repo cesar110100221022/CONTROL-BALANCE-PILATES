@@ -48,12 +48,14 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        // AGREGAR ESTO: Forzamos el guardado de la fecha directamente en el perfil público
-        if (data.user && fechaNacimiento) {
-          await supabase.from("perfiles").update({ 
+        // 🛡️ BLINDAJE: Usamos 'upsert' (Actualizar o Insertar) para ganarle a la base de datos.
+        // Si el servidor va lento y el perfil no existe, esto lo crea. Si ya existe, lo actualiza.
+        if (data.user) {
+          await supabase.from("perfiles").upsert({ 
+            id: data.user.id,
             nombre: nombre,
-            fecha_nacimiento: fechaNacimiento 
-          }).eq("id", data.user.id);
+            fecha_nacimiento: fechaNacimiento || null
+          }, { onConflict: 'id' });
         }
         
         if (data.session) {
@@ -182,6 +184,7 @@ export default function LoginPage() {
               <input 
                 type={showPassword ? "text" : "password"} 
                 required 
+                minLength={6} // <-- AGREGAR ESTO: Bloquea clics si la contraseña es menor a 6
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border-b border-border bg-transparent py-2 pr-10 text-foreground focus:outline-none focus:border-primary transition-colors text-sm" 

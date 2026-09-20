@@ -65,6 +65,9 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
   };
 
   const confirmarReserva = async () => {
+    // 🛡️ CANDADO ANTI-REBOTE: Ignora clics dobles accidentales en pantallas táctiles
+    if (isSubmitting) return;
+
     if (!claseSeleccionada) return Swal.fire({ title: "Aviso", text: "Por favor selecciona un horario primero.", icon: "info", confirmButtonColor: "#059669" });
     if (perfil.creditos <= 0) return Swal.fire({ title: "Sin créditos", text: "No tienes créditos suficientes para reservar.", icon: "warning", confirmButtonColor: "#f59e0b" });
 
@@ -179,7 +182,10 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
       // CANDADO DE TIEMPO REAL: Si seleccionaron "Hoy", ocultar las clases que ya pasaron
       const hoy = obtenerFechaLocal(new Date());
       if (c.dia === hoy) {
-        const ahora = new Date();
+        // 🛡️ BLINDAJE DE ZONA HORARIA: Forzamos la hora exacta de Monterrey
+        const horaOficialString = new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" });
+        const ahora = new Date(horaOficialString);
+        
         const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
         const minutosClase = convertirAMinutos(c.horario);
         
