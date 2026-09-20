@@ -75,15 +75,25 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
     if (ocupadas >= maxCamas) return Swal.fire({ title: "Clase Llena", text: "Alguien más acaba de tomar el último lugar.", icon: "error", confirmButtonColor: "#dc2626" });
 
     setIsSubmitting(true);
-    const { error } = await supabase.from('reservas').insert([{ nombre_cliente: perfil.nombre, whatsapp: perfil.whatsapp, clase_id: claseSeleccionada }]);
     
-    if (error) {
+    // 1. PRIMERO cobramos el crédito (Aseguramos el ingreso del estudio)
+    const nuevosCreditos = perfil.creditos - 1;
+    const { error: errorPago } = await supabase.from('perfiles').update({ creditos: nuevosCreditos }).eq('id', perfil.id);
+
+    if (errorPago) {
       setIsSubmitting(false);
-      return Swal.fire({ title: "Error", text: "Hubo un problema de conexión al reservar.", icon: "error", confirmButtonColor: "#dc2626" });
+      return Swal.fire({ title: "Error", text: "No pudimos procesar tu crédito. Revisa tu conexión a internet.", icon: "error", confirmButtonColor: "#dc2626" });
     }
 
-    const nuevosCreditos = perfil.creditos - 1;
-    await supabase.from('perfiles').update({ creditos: nuevosCreditos }).eq('id', perfil.id);
+    // 2. LUEGO apartamos la cama oficial
+    const { error: errorReserva } = await supabase.from('reservas').insert([{ nombre_cliente: perfil.nombre, whatsapp: perfil.whatsapp, clase_id: claseSeleccionada }]);
+    
+    if (errorReserva) {
+      // 🚨 PLAN DE EMERGENCIA: Si alguien le ganó el lugar o se cayó la red, le devolvemos su crédito intacto.
+      await supabase.from('perfiles').update({ creditos: perfil.creditos }).eq('id', perfil.id);
+      setIsSubmitting(false);
+      return Swal.fire({ title: "Clase no disponible", text: "No se pudo separar la cama. Tu crédito ha sido devuelto.", icon: "warning", confirmButtonColor: "#f59e0b" });
+    }
     
     setIsSubmitting(false);
     onActualizarPerfil({ ...perfil, creditos: nuevosCreditos });

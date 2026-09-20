@@ -18,7 +18,8 @@ export default function DashboardClienta() {
     reserva: null, 
     devuelveCredito: false, 
     titulo: "", 
-    mensaje: "" 
+    mensaje: "",
+    isCanceling: false // <-- AGREGAR ESTO
   });
 
   useEffect(() => {
@@ -85,8 +86,8 @@ export default function DashboardClienta() {
     const { reserva, devuelveCredito } = modalCancelacion;
     if (!reserva) return;
 
-    setModalCancelacion({ ...modalCancelacion, isOpen: false }); // Cerramos la ventana modal
-    setIsLoading(true);
+    // Activamos el modo "Cargando" del botón SIN cerrar el modal ni destruir la página
+    setModalCancelacion({ ...modalCancelacion, isCanceling: true });
 
     try {
       await supabase.from("reservas").delete().eq("id", reserva.id);
@@ -99,6 +100,9 @@ export default function DashboardClienta() {
 
       setMisReservas(misReservas.filter(r => r.id !== reserva.id));
       
+      // Ya terminó, ahora sí cerramos el modal suavemente
+      setModalCancelacion({ ...modalCancelacion, isOpen: false, isCanceling: false });
+      
       Swal.fire({
         title: "Clase Cancelada",
         text: devuelveCredito ? "Tu crédito ha sido devuelto automáticamente." : "No hubo devolución de crédito por política de 12 horas.",
@@ -107,15 +111,15 @@ export default function DashboardClienta() {
       });
       
     } catch (error) {
+      setModalCancelacion({ ...modalCancelacion, isCanceling: false });
       Swal.fire({
         title: "Error",
         text: "Hubo un error al cancelar. Intenta de nuevo.",
         icon: "error",
         confirmButtonColor: "#dc2626"
       });
-    } finally {
-      setIsLoading(false);
     }
+    // ELIMINAMOS el finally { setIsLoading(false) } para que no parpadee
   };
   // --- FIN: INTELIGENCIA DE TIEMPO ---
 
@@ -286,9 +290,10 @@ export default function DashboardClienta() {
           <div className="flex flex-col gap-3">
             <button 
               onClick={confirmarCancelacion} 
-              className={`w-full py-4 rounded-xl text-xs uppercase tracking-widest font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 ${modalCancelacion.devuelveCredito ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+              disabled={modalCancelacion.isCanceling}
+              className={`w-full py-4 rounded-xl text-xs uppercase tracking-widest font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:-translate-y-0 ${modalCancelacion.devuelveCredito ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
             >
-              Sí, Cancelar Clase
+              {modalCancelacion.isCanceling ? "Cancelando..." : "Sí, Cancelar Clase"}
             </button>
             <button 
               onClick={() => setModalCancelacion({ ...modalCancelacion, isOpen: false })} 

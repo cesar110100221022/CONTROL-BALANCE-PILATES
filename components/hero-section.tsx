@@ -45,6 +45,9 @@ export function HeroSection() {
   const [rutaDestino, setRutaDestino] = useState("/login");
   // 👇 AGREGAR ESTO: Estado aislado para el aviso de cancelación 👇
   const [pagoCancelado, setPagoCancelado] = useState(false);
+  
+  // 🔥 AQUÍ AGREGAS EL CANDADO DE STRIPE 🔥
+  const [procesandoPagoId, setProcesandoPagoId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -206,39 +209,43 @@ export function HeroSection() {
     .filter((c) => c.dia && c.dia.startsWith(diaSeleccionado))
     .sort((a, b) => convertirAMinutos(a.horario) - convertirAMinutos(b.horario));
     // Función conectada a Stripe con blindaje de usuario para recarga automática
-  const procesarPagoStripe = async (priceId?: string) => {
-    if (!priceId) return;
-
-    // Si no ha iniciado sesión, la enviamos al login para saber a quién acreditarle las clases
-    if (!perfil) {
-      alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
-      router.push("/login");
-      return;
-    }
-    
-    try {
-      const respuesta = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          priceId,
-          userId: perfil.id,
-          userEmail: perfil.email 
-        }) 
-      });
-      
-      const datos = await respuesta.json();
-      
-      if (datos.url) {
-        window.location.href = datos.url; // Redirige a la caja de cobro segura de Stripe
-      } else {
-        alert("No se pudo iniciar el proceso de pago. Intenta más tarde.");
+    const procesarPagoStripe = async (priceId?: string) => {
+      if (!priceId) return;
+  
+      if (!perfil) {
+        alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
+        router.push("/login");
+        return;
       }
-    } catch (error) {
-      console.error("Error al procesar checkout:", error);
-      alert("Hubo un problema de conexión con el servidor de pagos.");
-    }
-  };
+      
+      // Cerramos el candado para que no den doble clic
+      setProcesandoPagoId(priceId); 
+      
+      try {
+        const respuesta = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            priceId,
+            userId: perfil.id,
+            userEmail: perfil.email 
+          }) 
+        });
+        
+        const datos = await respuesta.json();
+        
+        if (datos.url) {
+          window.location.href = datos.url; 
+        } else {
+          setProcesandoPagoId(null); // Hubo error, liberamos el botón
+          alert("No se pudo iniciar el proceso de pago. Intenta más tarde.");
+        }
+      } catch (error) {
+        console.error("Error al procesar checkout:", error);
+        setProcesandoPagoId(null); // Hubo error, liberamos el botón
+        alert("Hubo un problema de conexión con el servidor de pagos.");
+      }
+    };
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
       {/* FONDO ANIMADO - OPTIMIZADO PARA MÓVIL Y PC */}
@@ -411,9 +418,10 @@ export function HeroSection() {
                 {/* Botón principal: Stripe Checkout automático */}
                 <button 
                   onClick={() => procesarPagoStripe(plan.priceId)}
-                  className="w-full block text-center rounded-md bg-foreground text-background py-2.5 md:py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"
+                  disabled={procesandoPagoId === plan.priceId}
+                  className="w-full block text-center rounded-md bg-foreground text-background py-2.5 md:py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Pagar con Tarjeta
+                  {procesandoPagoId === plan.priceId ? "Cargando Stripe..." : "Pagar con Tarjeta"}
                 </button>
                 
                 {/* Botón secundario: Pago manual por WhatsApp */}

@@ -41,12 +41,20 @@ export default function LoginPage() {
           options: {
             data: { 
               nombre,
-              fecha_nacimiento: fechaNacimiento
+              fecha_nacimiento: fechaNacimiento // Lo dejamos aquí por si tu Trigger de Supabase lo usa
             } 
           }
         });
 
         if (error) throw error;
+
+        // AGREGAR ESTO: Forzamos el guardado de la fecha directamente en el perfil público
+        if (data.user && fechaNacimiento) {
+          await supabase.from("perfiles").update({ 
+            nombre: nombre,
+            fecha_nacimiento: fechaNacimiento 
+          }).eq("id", data.user.id);
+        }
         
         if (data.session) {
           router.push("/dashboard");
@@ -67,7 +75,32 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
+  // --- INICIO: FUNCIÓN DE ACCESO MÁGICO (SIN CONTRASEÑA) ---
+  const enviarEnlaceMagico = async () => {
+    if (!email) {
+      setMensaje("Por favor, escribe tu correo arriba para enviarte el acceso rápido.");
+      return;
+    }
+    setIsLoading(true);
+    setMensaje("");
+    
+    const { error } = await supabase.auth.signInWithOtp({ 
+      email,
+      options: { 
+        // Obliga a Supabase a aterrizarla en el dashboard después de hacer clic en el correo
+        emailRedirectTo: `${window.location.origin}/dashboard` 
+      }
+    });
+    
+    setIsLoading(false);
+    
+    if (error) {
+      setMensaje("Hubo un error al enviar el enlace. Revisa que tu correo esté bien escrito.");
+    } else {
+      setMensaje("✨ ¡Magia! Revisa tu correo. Te enviamos un enlace seguro para entrar con un solo clic.");
+    }
+  };
+  // --- FIN: FUNCIÓN DE ACCESO MÁGICO ---
   return (
     <main className="min-h-screen flex items-center justify-center bg-background px-4 relative">
       
@@ -132,7 +165,19 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Contraseña</label>
+            <div className="flex justify-between items-end mb-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contraseña</label>
+              {/* Botón sutil de recuperación mágica (solo aparece en Iniciar Sesión) */}
+              {isLogin && (
+                <button 
+                  type="button" 
+                  onClick={enviarEnlaceMagico}
+                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
+            </div>
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"} 
