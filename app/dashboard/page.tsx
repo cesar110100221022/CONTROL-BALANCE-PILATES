@@ -89,43 +89,38 @@ export default function DashboardClienta() {
     setModalCancelacion({ ...modalCancelacion, isCanceling: true });
 
     try {
-      // 1. ELIMINACIÓN ESTRICTA
-      const { data: deletedData, error: errorDelete } = await supabase
+      // 1. ELIMINACIÓN DE LA RESERVA
+      const { error: errorDelete } = await supabase
         .from("reservas")
         .delete()
-        .eq("id", reserva.id)
-        .select();
+        .eq("id", reserva.id);
         
       if (errorDelete) throw new Error("No se pudo borrar: " + errorDelete.message);
-      if (!deletedData || deletedData.length === 0) throw new Error("Supabase bloqueó la acción (Revisar RLS).");
 
       let creditosFinales = perfil.creditos;
 
-      // 2. LECTURA EN TIEMPO REAL Y SUMA ESTRICTA
+      // 2. ACTUALIZACIÓN DE CRÉDITO Y CONFESIÓN
       if (devuelveCredito && perfil) {
-        const { data: perfilNube, error: errorLectura } = await supabase
+        const { data: perfilNube } = await supabase
           .from("perfiles")
           .select("creditos")
           .eq("id", perfil.id)
           .single();
-          
-        if (errorLectura) throw new Error("No se pudo leer tu saldo en la nube.");
 
         const saldoReal = Number(perfilNube.creditos);
         const nuevosCreditos = saldoReal + 1; 
         
-        // 🔥 MODO DETECTIVE: Esta ventana nos dirá la verdad 🔥
-        const confirmar = window.confirm(`🔍 MODO DETECTIVE:\nEn Supabase tienes ${saldoReal} créditos.\nEl sistema te va a subir a ${nuevosCreditos}.\n\n¿Deseas continuar?`);
-        if (!confirmar) throw new Error("Cancelado por ti misma.");
-
+        // Ordenamos guardar el nuevo saldo
         const { data: dataPerfil, error: errorUpdate } = await supabase
           .from("perfiles")
           .update({ creditos: nuevosCreditos })
           .eq("id", perfil.id)
           .select();
 
-        if (errorUpdate) throw new Error("Error al guardar: " + errorUpdate.message);
-        if (!dataPerfil || dataPerfil.length === 0) throw new Error("Supabase bloqueó la devolución.");
+        // 🔥 LA CONFESIÓN: Obligamos a Supabase a mostrarnos qué hizo 🔥
+        alert("CONFESIÓN DE SUPABASE:\n\n" + JSON.stringify(dataPerfil));
+
+        if (errorUpdate) throw new Error("Fallo al guardar: " + errorUpdate.message);
         
         creditosFinales = nuevosCreditos;
       }
@@ -135,7 +130,7 @@ export default function DashboardClienta() {
       
       Swal.fire({
         title: "Clase Cancelada",
-        text: devuelveCredito ? "Tu crédito ha sido devuelto." : "No hubo devolución de crédito.",
+        text: devuelveCredito ? "Tu crédito ha sido devuelto." : "No hubo devolución.",
         icon: devuelveCredito ? "success" : "info",
         confirmButtonColor: "#059669"
       });
@@ -157,9 +152,7 @@ export default function DashboardClienta() {
             }
           })
         });
-      } catch (error) {
-        console.error("Error correo:", error);
-      }
+      } catch (error) {}
 
     } catch (error: any) {
       console.error("Fallo crítico:", error);
