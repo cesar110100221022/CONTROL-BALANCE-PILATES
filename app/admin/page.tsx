@@ -306,63 +306,60 @@ const quitarDeLista = async (id: string) => {
 // --- FIN: GESTOR DE LISTA DE ESPERA ---
 // --- INICIO: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
 const [cumpleañerasMes, setCumpleañerasMes] = useState<any[]>([]);
-const [isCumpleañosModalOpen, setIsCumpleañosModalOpen] = useState(false); // <-- NUEVO ESTADO PARA LA VENTANA
+const [isCumpleañosModalOpen, setIsCumpleañosModalOpen] = useState(false);
 const [estadisticas, setEstadisticas] = useState({
-  totalClientas: 0,
-  clasesHoy: 0,
-  ingresosMes: 0
+  ingresosMes: 0,
+  paqueteEstrella: "Calculando..."
 });
 
 const cargarEstadisticas = async () => {
   try {
-    // 1. Contar clientas totales
-    const { count: countClientas } = await supabase
-      .from("perfiles")
-      .select("*", { count: "exact", head: true });
-
-    // 2. Contar clases programadas para HOY
-    const hoy = new Date().toISOString().split('T')[0]; // Fecha en formato YYYY-MM-DD
-    const { count: countClases } = await supabase
-      .from("clases")
-      .select("*", { count: "exact", head: true })
-      .eq("dia", hoy);
-
-    // 3. Sumar ingresos del mes (Si tienes tabla de ventas)
-    // Nota: Si tu tabla se llama diferente, aquí lo ajustamos después.
+    const hoy = new Date().toISOString().split('T')[0];
     const mesActual = hoy.substring(0, 7); // Extrae YYYY-MM
-    const { data: ventas } = await supabase
-      .from("ventas") // Asumiendo que así se llama la Bóveda Financiera
-      .select("monto")
+    
+    // 1. Calcular Ingresos Reales y Paquete Estrella desde "transacciones"
+    const { data: transacciones } = await supabase
+      .from("transacciones")
+      .select("monto_mxn, paquete_comprado, estatus_pago")
       .like("created_at", `${mesActual}%`);
-      
-    const totalIngresos = ventas?.reduce((acc, venta) => acc + (venta.monto || 0), 0) || 0;
-// 4. Buscar cumpleañeras del mes actual (Filtro seguro en JavaScript)
-const mesActualNumero = String(new Date().getMonth() + 1).padStart(2, '0');
-const { data: perfiles } = await supabase.from("perfiles").select("nombre, fecha_nacimiento, whatsapp");
 
-const cumpleañeras = (perfiles || []).filter(p => {
-  if (!p.fecha_nacimiento) return false;
-  const partesFecha = p.fecha_nacimiento.split('-'); // Divide YYYY-MM-DD
-  return partesFecha[1] === mesActualNumero; // Compara solo el mes
-});
-setCumpleañerasMes(cumpleañeras);
+    const ingresosReales = transacciones
+      ?.filter(tx => tx.estatus_pago === "Pagado")
+      .reduce((acc, tx) => acc + (tx.monto_mxn || 0), 0) || 0;
+
+    let paqueteTop = "Ninguno";
+    let maxVentas = 0;
+    const conteoPaquetes: any = {};
+    
+    transacciones?.filter(tx => tx.estatus_pago === "Pagado").forEach(tx => {
+      if (tx.paquete_comprado) {
+        conteoPaquetes[tx.paquete_comprado] = (conteoPaquetes[tx.paquete_comprado] || 0) + 1;
+        if (conteoPaquetes[tx.paquete_comprado] > maxVentas) {
+          maxVentas = conteoPaquetes[tx.paquete_comprado];
+          paqueteTop = tx.paquete_comprado;
+        }
+      }
+    });
+
+    // 2. Buscar cumpleañeras del mes
+    const mesActualNumero = String(new Date().getMonth() + 1).padStart(2, '0');
+    const { data: perfiles } = await supabase.from("perfiles").select("nombre, fecha_nacimiento, whatsapp");
+    const cumpleañeras = (perfiles || []).filter(p => p.fecha_nacimiento && p.fecha_nacimiento.split('-')[1] === mesActualNumero);
+    setCumpleañerasMes(cumpleañeras);
+
     setEstadisticas({
-      totalClientas: countClientas || 0,
-      clasesHoy: countClases || 0,
-      ingresosMes: totalIngresos
+      ingresosMes: ingresosReales,
+      paqueteEstrella: paqueteTop
     });
   } catch (error) {
     console.error("Error al cargar estadísticas", error);
   }
 };
 
-// Hacemos que se calcule automáticamente al abrir la página
 useEffect(() => {
   cargarEstadisticas();
-
 }, []);
 // --- FIN: MÓDULO DE ESTADÍSTICAS GERENCIALES ---
-
   useEffect(() => {
     cargarDatosGenerales();
   }, []);
@@ -772,6 +769,48 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
     if (clasesCreadas > 0) alert(`¡Éxito! Se generaron ${clasesCreadas} clases fijas automáticamente.`);
     else alert("Todos los horarios fijos ya estaban cargados. No se duplicó nada.");
   };
+  // --- INICIO: FUNCIÓN EXPORTAR A EXCEL (CORTE DE CAJA) ---
+  const descargarCorteCaja = async () => {
+    setIsLoading(true);
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const mesActual = hoy.substring(0, 7);
+      
+      const { data: transacciones } = await supabase
+        .from("transacciones")
+        .select("*")
+        .like("created_at", `${mesActual}%`)
+        .order('created_at', { ascending: true });
+
+      if (!transacciones || transacciones.length === 0) {
+        Swal.fire("Sin datos", "No hay ventas registradas este mes.", "info");
+        return;
+      }
+
+      // El %EF%BB%BF asegura que Excel lea bien los acentos (UTF-8)
+      let csvContent = "data:text/csv;charset=utf-8,%EF%BB%BF"; 
+      csvContent += "Fecha,Clienta,Paquete,Monto Pagado,Metodo de Pago,Estatus\n";
+
+      transacciones.forEach(tx => {
+        const fecha = new Date(tx.created_at).toLocaleDateString('es-MX');
+        const fila = `"${fecha}","${tx.cliente_nombre}","${tx.paquete_comprado}",${tx.monto_mxn},"${tx.metodo_pago}","${tx.estatus_pago}"`;
+        csvContent += fila + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Corte_ControlBalance_${mesActual}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      Swal.fire("Error", "No se pudo generar el archivo Excel.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // --- FIN: FUNCIÓN EXPORTAR A EXCEL ---
 // --- INICIO: LÓGICA DE BUSCADORES Y LIMPIEZA VISUAL ---
   // 1. Filtrar Clientas por nombre, WhatsApp y Filtro de 0 Créditos
   const clientesFiltrados = clientes.filter(c => {
@@ -815,6 +854,25 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
   // 👆 FIN DEL ESCÁNER 👆
   
   // --- FIN: LÓGICA DE BUSCADORES ---
+  // --- INICIO: CÁLCULOS GERENCIALES EN TIEMPO REAL ---
+  // A. Tasa de Ocupación (Próximos 7 días)
+  const clasesFuturas = clases.filter(c => diasValidos.includes(c.dia));
+  const capacidadTotal = clasesFuturas.reduce((acc, c) => acc + (c.cupo_max || 6), 0);
+  const camasOcupadas = reservasActivasFiltradas.length;
+  const tasaOcupacion = capacidadTotal > 0 ? Math.round((camasOcupadas / capacidadTotal) * 100) : 0;
+
+  // B. Oportunidades de Renovación (Créditos por expirar en 7 días)
+  const hoyDateObj = new Date();
+  const en7DiasObj = new Date();
+  en7DiasObj.setDate(hoyDateObj.getDate() + 7);
+
+  const clientasPorExpirar = clientes.filter(c => {
+    if ((c.creditos || 0) <= 0 || !c.fecha_expiracion) return false;
+    const [year, month, day] = c.fecha_expiracion.split('-');
+    const fechaExp = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return fechaExp >= hoyDateObj && fechaExp <= en7DiasObj;
+  }).length;
+  // --- FIN: CÁLCULOS GERENCIALES EN TIEMPO REAL ---
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-foreground tracking-widest uppercase text-xs">Cargando panel operativo...</div>;
 
   return (
@@ -883,57 +941,96 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
           </div>
         )}
         {/* 👆 FIN: BANNER DEL ASISTENTE VIRTUAL 👆 */}
-        {/* --- INICIO: TARJETAS DE ESTADÍSTICAS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* --- INICIO: PANEL ESTRATÉGICO GERENCIAL (SCORECARDS) --- */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
-          {/* Tarjeta 1: Ingresos */}
-          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-inner">
-              <DollarSign size={28} strokeWidth={1.5} />
+          {/* 1. Ingresos del Mes */}
+          <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1 col-span-2">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-inner">
+                <DollarSign size={20} strokeWidth={2} />
+              </div>
+              <span className="bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border border-emerald-100">Este mes</span>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Ingresos del Mes</p>
-              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">${estadisticas.ingresosMes.toLocaleString('es-MX')}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Ingresos (Pagados)</p>
+              <p className="text-2xl md:text-3xl font-sans font-light tracking-tight text-foreground">${estadisticas.ingresosMes.toLocaleString('es-MX')}</p>
             </div>
           </div>
 
-          {/* Tarjeta 2: Clientas */}
-          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-              <Users size={28} strokeWidth={1.5} />
+          {/* 2. Tasa de Ocupación */}
+          <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1 col-span-2 md:col-span-1 lg:col-span-2">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shadow-inner">
+                <Users size={20} strokeWidth={2} />
+              </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clientas Activas</p>
-              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{estadisticas.totalClientas}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Ocupación (7 días)</p>
+              <div className="flex items-end gap-2 mb-1.5">
+                <p className="text-2xl md:text-3xl font-sans font-light tracking-tight text-foreground">{tasaOcupacion}%</p>
+                <span className="text-xs text-muted-foreground mb-1">({camasOcupadas}/{capacidadTotal})</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-1.5">
+                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${Math.min(tasaOcupacion, 100)}%` }}></div>
+              </div>
             </div>
           </div>
 
-          {/* Tarjeta 3: Operación de Hoy */}
-          <div className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner">
-              <CalendarCheck size={28} strokeWidth={1.5} />
+          {/* 3. Paquete Estrella */}
+          <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-600 shadow-inner">
+                <Star size={20} strokeWidth={2} />
+              </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Clases de Hoy</p>
-              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{estadisticas.clasesHoy}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Top Ventas</p>
+              <p className="text-sm font-bold text-foreground leading-tight">{estadisticas.paqueteEstrella}</p>
             </div>
           </div>
-         {/* Tarjeta 4: Cumpleaños del Mes (NUEVA) */}
-         <div 
-            onClick={() => setIsCumpleañosModalOpen(true)}
-            className="bg-card border border-border p-6 rounded-2xl shadow-sm flex items-center gap-5 transition-all hover:-translate-y-1 cursor-pointer hover:shadow-md border-pink-100/50 hover:border-pink-300"
-          >
-            <div className="w-14 h-14 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 shadow-inner">
-              <Gift size={28} strokeWidth={1.5} />
+
+          {/* 4. Oportunidades (Por Expirar) */}
+          <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner">
+                <Clock size={20} strokeWidth={2} />
+              </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Cumpleaños del Mes</p>
-              <p className="text-3xl font-sans font-light tracking-tight text-foreground mt-1">{cumpleañerasMes.length}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Por Expirar</p>
+              <p className="text-2xl font-sans font-light tracking-tight text-foreground">{clientasPorExpirar} <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">atletas</span></p>
+            </div>
+          </div>
+
+          {/* 5. Fricción Financiera (Deudas) */}
+          <div className="bg-card border border-border p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-600 shadow-inner">
+                <AlertTriangle size={20} strokeWidth={2} />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Adeudos</p>
+              <p className="text-2xl font-sans font-light tracking-tight text-red-600 font-bold">{deudas.length} <span className="text-[10px] uppercase tracking-widest text-red-400 font-bold">pendientes</span></p>
+            </div>
+          </div>
+
+          {/* 6. Cumpleaños */}
+          <div onClick={() => setIsCumpleañosModalOpen(true)} className="bg-card border border-pink-100 hover:border-pink-300 p-4 md:p-5 rounded-2xl shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1 cursor-pointer">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500 shadow-inner">
+                <Gift size={20} strokeWidth={2} />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-pink-600 font-bold mb-1">Cumpleaños</p>
+              <p className="text-2xl font-sans font-light tracking-tight text-foreground">{cumpleañerasMes.length} <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">este mes</span></p>
             </div>
           </div>
 
         </div>
-        {/* --- FIN: TARJETAS DE ESTADÍSTICAS --- */}
+        {/* --- FIN: PANEL ESTRATÉGICO GERENCIAL --- */}
 
         {/* TABS */}
         <div className="flex border-b border-border mb-8 overflow-x-auto">
@@ -1006,6 +1103,24 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                         <span className="flex items-center gap-1.5"><UserPlus size={12}/> Nueva: Dar Prueba</span>
                       </span>
                     )}
+                    {/* --- INICIO: ASISTENTE DE RENOVACIÓN DE PAQUETES --- */}
+                    {(() => {
+                      // Si tiene 0 créditos y NO es nueva (es decir, ya ha venido antes)
+                      if ((cliente.creditos || 0) <= 0 && totalReservasHistoricas > 0) {
+                        const mensajeRenovacion = `¡Hola ${cliente.nombre.split(' ')[0]}! 🌟 Te escribo de Control Balance. Notamos que se han terminado tus clases. ¿Te gustaría que te apoyemos renovando tu paquete para que no pierdas el ritmo esta semana?`;
+                        const linkRenovacionWA = `https://wa.me/${(cliente.whatsapp || "").replace(/\D/g, '')}?text=${encodeURIComponent(mensajeRenovacion)}`;
+                        
+                        return (
+                          <div className="mt-2">
+                            <a href={linkRenovacionWA} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded text-[10px] uppercase tracking-widest font-bold hover:bg-blue-100 transition-colors shadow-sm cursor-pointer">
+                              <MessageCircle size={12}/> Recordatorio de Renovación
+                            </a>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    {/* --- FIN: ASISTENTE DE RENOVACIÓN --- */}
 
                     {/* --- INICIO: CONTROL DE DEUDORAS --- */}
                     {(() => {
@@ -1389,7 +1504,19 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                 El sistema escanea el perfil de <b>cada una de tus clientas</b>. Suma sus créditos disponibles más sus reservas. Luego, empaqueta automáticamente sus clases usando tu lista de precios. Por ejemplo: Si Ana tiene 7 clases en total, el sistema calcula <b>7 x $240 (Clase Suelta)</b>. Pero si Sofía tiene 8 clases, el sistema aplica automáticamente el precio de <b>$1,050 (Paquete 8)</b>. Esto te da el valor real y exacto del dinero que has generado.
               </p>
             </div>
-
+            {/* --- BOTÓN DE EXCEL PARA EL CONTADOR --- */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-emerald-50/50 p-6 rounded-lg border border-emerald-100 mb-6 gap-4">
+              <div>
+                <h4 className="font-serif text-xl text-emerald-900">Corte de Caja Mensual (Excel)</h4>
+                <p className="text-sm text-emerald-700/80 mt-1">Descarga todas las transacciones de este mes en formato Excel para enviarlas a tu contador.</p>
+              </div>
+              <button 
+                onClick={descargarCorteCaja} 
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-md text-xs font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+              >
+                <DollarSign size={16}/> Descargar Reporte
+              </button>
+            </div>
             {/* --- NUEVA SECCIÓN: LISTA DE PAQUETES --- */}
             <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
               <div className="p-5 border-b border-border bg-secondary/20">

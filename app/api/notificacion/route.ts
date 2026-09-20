@@ -5,29 +5,58 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
-    // 1. Recibimos TODOS los datos nuevos
-    const { nombreCliente, telefono, dia, clase, horario, creditosRestantes } = await request.json();
+    const body = await request.json();
 
-    // 🔥 NUEVO: Limpiamos el teléfono (quita espacios, guiones o paréntesis) para que el link no falle
+    // 1. Detectamos el tipo de aviso (Si el código viejo no lo envía, asumimos RESERVA)
+    const tipo = body.tipo || 'RESERVA'; 
+    const datos = body.datos || body;
+
+    const { nombreCliente, telefono, dia, clase, horario, creditosRestantes } = datos;
     const numeroLimpio = telefono ? String(telefono).replace(/\D/g, '') : '';
+    const correoAdmin = 'controlbalancestudio26@gmail.com';
 
+    // 2. Variables dinámicas para el diseño del correo
+    let subject = "";
+    let tituloHtml = "";
+    let colorTema = "";
+    let mensajeExtra = "";
+
+    // 3. Lógica según lo que haya pasado en el estudio
+    if (tipo === 'RESERVA') {
+      subject = `🔔 Nueva Reserva: ${nombreCliente}`;
+      tituloHtml = "¡Tienes una nueva reserva! 🎉";
+      colorTema = "#059669"; // Verde esmeralda
+      mensajeExtra = "El sistema ha descontado su crédito y apartado la cama de forma automática.";
+    } else if (tipo === 'CANCELACION') {
+      subject = `⚠️ Cancelación: ${nombreCliente} liberó una cama`;
+      tituloHtml = "¡Una alumna ha cancelado! 🔄";
+      colorTema = "#dc2626"; // Rojo alerta
+      mensajeExtra = "Se acaba de liberar una cama en esta clase. Si hay personas en la fila de espera, te aparecerán en tu Panel de Control.";
+    } else if (tipo === 'LISTA_ESPERA') {
+      subject = `⏳ Fila de Espera: ${nombreCliente}`;
+      tituloHtml = "¡Alguien se formó en la fila! 🙋‍♀️";
+      colorTema = "#f59e0b"; // Naranja/Ámbar
+      mensajeExtra = "Esta clienta no alcanzó cama y está esperando que alguien cancele para tomar su lugar.";
+    }
+
+    // 4. Enviamos el correo con el diseño adaptado
     const data = await resend.emails.send({
       from: 'Control Balance <onboarding@resend.dev>',
-      to: ['controlbalancestudio26@gmail.com'], // ⚠️ Tu correo registrado en Resend
-      subject: `🔔 Nueva Reserva: ${nombreCliente}`, 
+      to: [correoAdmin],
+      subject: subject,
       html: `
         <div style="font-family: sans-serif; color: #333; padding: 20px;">
-          <h2 style="color: #d97757;">¡Tienes una nueva reserva! 🎉</h2>
-          <p>El sistema acaba de registrar una nueva clase:</p>
+          <h2 style="color: ${colorTema};">${tituloHtml}</h2>
+          <p>${mensajeExtra}</p>
           
           <ul style="background: #f5efe6; padding: 20px; border-radius: 8px; list-style: none;">
-            <li style="margin-bottom: 12px;">👤 <strong>Alumna:</strong> ${nombreCliente}</li>
-            <li style="margin-bottom: 12px;">📱 <strong>WhatsApp:</strong> <a href="https://wa.me/${numeroLimpio}" style="color: #d97757; text-decoration: none;">${telefono}</a></li>
-            <li style="margin-bottom: 12px;">📅 <strong>Día de la clase:</strong> ${dia}</li>
-            <li style="margin-bottom: 12px;">⏰ <strong>Horario:</strong> ${horario}</li>
-            <li style="margin-bottom: 12px;">🧘‍♀️ <strong>Clase:</strong> ${clase}</li>
+            <li style="margin-bottom: 12px;">👤 <strong>Alumna:</strong> ${nombreCliente || 'No especificado'}</li>
+            <li style="margin-bottom: 12px;">📱 <strong>WhatsApp:</strong> <a href="https://wa.me/${numeroLimpio}" style="color: ${colorTema}; text-decoration: none; font-weight: bold;">${telefono || 'No especificado'}</a></li>
+            <li style="margin-bottom: 12px;">📅 <strong>Día de la clase:</strong> ${dia || 'No especificado'}</li>
+            <li style="margin-bottom: 12px;">⏰ <strong>Horario:</strong> ${horario || 'No especificado'}</li>
+            <li style="margin-bottom: 12px;">🧘‍♀️ <strong>Clase:</strong> ${clase || 'No especificada'}</li>
             <li style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-              🎟️ <strong>Créditos restantes de la alumna:</strong> ${creditosRestantes}
+              🎟️ <strong>Créditos restantes:</strong> ${creditosRestantes !== undefined ? creditosRestantes : 'N/A'}
             </li>
           </ul>
 
@@ -40,6 +69,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error });
+    console.error("Error al enviar correo:", error);
+    return NextResponse.json({ error }, { status: 500 });
   }
 }

@@ -136,6 +136,28 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
       Swal.fire({ title: "¡Estás en la fila!", text: "Te avisaremos por WhatsApp si se libera un lugar.", icon: "success", confirmButtonColor: "#059669" });
       setClaseSeleccionada("");
       onClose();
+      // --- INICIO: AVISO DE FILA DE ESPERA AL ADMIN ---
+      try {
+        const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
+        await fetch('/api/send-email', { // O el nombre que le hayas puesto a tu archivo route.ts
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'LISTA_ESPERA',
+            datos: {
+              nombreCliente: perfil.nombre,
+              telefono: perfil.whatsapp,
+              dia: diaSeleccionado,
+              clase: claseElegida?.nombre || "Clase",
+              horario: claseElegida?.horario || "Horario en espera",
+              creditosRestantes: perfil.creditos
+            }
+          })
+        });
+      } catch (error) {
+        console.error("No se pudo enviar el aviso de fila de espera:", error);
+      }
+      // --- FIN: AVISO DE FILA DE ESPERA ---
     }
   };
 

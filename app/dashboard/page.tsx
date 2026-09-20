@@ -100,6 +100,27 @@ export default function DashboardClienta() {
 
       setMisReservas(misReservas.filter(r => r.id !== reserva.id));
       
+      // --- INICIO: AVISO DE CANCELACIÓN AL ADMIN ---
+      try {
+        await fetch('/api/send-email', { // O el nombre que le hayas puesto a tu archivo route.ts
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'CANCELACION',
+            datos: {
+              nombreCliente: perfil?.nombre || "Clienta",
+              telefono: perfil?.whatsapp || "",
+              dia: reserva.claseInfo.dia,
+              clase: reserva.claseInfo.nombre,
+              horario: reserva.claseInfo.horario,
+              creditosRestantes: devuelveCredito ? (perfil.creditos + 1) : perfil.creditos
+            }
+          })
+        });
+      } catch (error) {
+        console.error("No se pudo enviar el correo de cancelación:", error);
+      }
+      // --- FIN: AVISO DE CANCELACIÓN AL ADMIN ---
       // Ya terminó, ahora sí cerramos el modal suavemente
       setModalCancelacion({ ...modalCancelacion, isOpen: false, isCanceling: false });
       
