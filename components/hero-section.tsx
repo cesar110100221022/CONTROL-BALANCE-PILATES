@@ -17,53 +17,30 @@ interface Clase {
 export function HeroSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  // AGREGAR ESTO: Estado para controlar el menú móvil
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [clasesDisponibles, setClasesDisponibles] = useState<Clase[]>([]);
-  const [reservasActivas, setReservasActivas] = useState<any[]>([]);
   
   const [perfil, setPerfil] = useState<any>(null);
   const router = useRouter();
 
-  // Mini-función para obligar a usar la hora local de México
-  const obtenerFechaLocal = (fecha: Date) => {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const [claseSeleccionada, setClaseSeleccionada] = useState("");
-  const [diaSeleccionado, setDiaSeleccionado] = useState(obtenerFechaLocal(new Date()));
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [nombreInput, setNombreInput] = useState("");
-  const [whatsappInput, setWhatsappInput] = useState("");
-  const [isActualizando, setIsActualizando] = useState(false);
-
-  // AGREGAR ESTO: Memoria inteligente para el botón "Vivir la experiencia"
+  // Memorias inteligentes
   const [rutaDestino, setRutaDestino] = useState("/login");
-  // 👇 AGREGAR ESTO: Estado aislado para el aviso de cancelación 👇
   const [pagoCancelado, setPagoCancelado] = useState(false);
-  
-  // 🔥 AQUÍ AGREGAS EL CANDADO DE STRIPE 🔥
   const [procesandoPagoId, setProcesandoPagoId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    obtenerClases();
     verificarUsuario();
   }, []);
 
-  // AGREGAR ESTO: Auto-abrir el modal si la clienta viene del Dashboard
+  // Auto-abrir el modal si la clienta viene del Dashboard
   useEffect(() => {
     if (perfil && window.location.search.includes("reserva=true")) {
       setIsModalOpen(true);
-      // Borramos la señal secreta de la URL para que no se quede pegada
       window.history.replaceState(null, "", "/");
     }
   }, [perfil]);
-  // 👇 AGREGAR ESTO: Efecto aislado que lee la URL y se limpia solo 👇
+
+  // Efecto aislado que lee la URL y se limpia solo (Aviso cancelación Stripe)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('pago') === 'cancelado') {
@@ -72,7 +49,7 @@ export function HeroSection() {
         window.history.replaceState(null, '', window.location.pathname);
         setPagoCancelado(false);
       }, 5000);
-      return () => clearTimeout(timer); // Buena práctica: limpiar el timer
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -82,17 +59,9 @@ export function HeroSection() {
       const { data } = await supabase.from("perfiles").select("*").eq("id", user.id).single();
       if (data) {
         setPerfil({ ...data, email: user.email }); 
-        setRutaDestino("/dashboard"); // <-- AGREGAR ESTO: Si tiene sesión, cambia la ruta
+        setRutaDestino("/dashboard");
       }
     }
-  };
-
-  const obtenerClases = async () => {
-    const { data: dataClases } = await supabase.from('clases').select('*');
-    if (dataClases) setClasesDisponibles(dataClases as Clase[]);
-
-    const { data: dataReservas } = await supabase.from('reservas').select('clase_id');
-    if (dataReservas) setReservasActivas(dataReservas);
   };
 
   const abrirModalDeReserva = () => {
@@ -100,152 +69,45 @@ export function HeroSection() {
     else setIsModalOpen(true);
   };
 
-  const guardarPerfil = async () => {
-    if (!nombreInput || !whatsappInput) {
-      alert("Por favor ingresa tu nombre y WhatsApp para continuar.");
+  const procesarPagoStripe = async (priceId?: string) => {
+    if (!priceId) return;
+
+    if (!perfil) {
+      alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
+      router.push("/login");
       return;
     }
-    setIsActualizando(true);
-    const { error } = await supabase.from("perfiles").update({ nombre: nombreInput, whatsapp: whatsappInput }).eq("id", perfil.id);
-    setIsActualizando(false);
-    if (error) alert("Hubo un error al guardar tus datos. Intenta de nuevo.");
-    else setPerfil({ ...perfil, nombre: nombreInput, whatsapp: whatsappInput });
-  };
-
-  const confirmarReserva = async () => {
-    if (!claseSeleccionada) {
-      alert("Por favor, selecciona un horario para asegurar tu lugar.");
-      return;
-    }
-
-    if (perfil.creditos <= 0) {
-      alert("No tienes créditos suficientes. Por favor, contacta a Liliana para recargar tu paquete.");
-      return;
-    }
-
-    // 👇 AGREGAR ESTO: Candado de caducidad 👇
-    if (perfil.fecha_expiracion) {
-      const hoy = new Date();
-      hoy.setHours(0,0,0,0); // Ignoramos la hora exacta, solo importa el día
-      const expiracion = new Date(`${perfil.fecha_expiracion}T00:00:00`); // Forzar zona horaria neutral
+    
+    // Cerramos el candado para que no den doble clic
+    setProcesandoPagoId(priceId); 
+    
+    try {
+      const respuesta = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId,
+          userId: perfil.id,
+          userEmail: perfil.email 
+        }) 
+      });
       
-      if (hoy > expiracion) {
-        alert(`Tus créditos vencieron el ${expiracion.toLocaleDateString('es-MX')}. Por favor, adquiere un nuevo paquete para seguir entrenando.`);
-        return; // Detenemos la reserva
+      const datos = await respuesta.json();
+      
+      if (datos.url) {
+        window.location.href = datos.url; 
+      } else {
+        setProcesandoPagoId(null); 
+        alert("No se pudo iniciar el proceso de pago. Intenta más tarde.");
       }
-    }
-    // 👆 FIN DEL CANDADO 👆
-
-    const claseElegida = clasesDisponibles.find(c => String(c.id) === String(claseSeleccionada));
-    const maxCamas = claseElegida?.cupo_max || 6;
-    const ocupadasActuales = reservasActivas.filter(r => String(r.clase_id) === String(claseSeleccionada)).length;
-
-    if (ocupadasActuales >= maxCamas) {
-      alert("Lo sentimos, esta clase acaba de llenarse. Por favor, utiliza el botón naranja para unirte a la lista de espera.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const { error: errorReserva } = await supabase.from('reservas').insert([{ nombre_cliente: perfil.nombre, whatsapp: perfil.whatsapp, clase_id: claseSeleccionada }]);
-
-    if (errorReserva) {
-      console.error("Error al insertar en Supabase:", errorReserva);
-      alert("Hubo un problema de conexión. Intenta de nuevo.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const nuevosCreditos = perfil.creditos - 1;
-    const { error: errorUpdate } = await supabase.from('perfiles').update({ creditos: nuevosCreditos }).eq('id', perfil.id);
-
-    setIsSubmitting(false);
-    if (errorUpdate) {
-      console.error("Reserva exitosa, pero error al restar crédito:", errorUpdate);
-    } else {
-      setPerfil({ ...perfil, creditos: nuevosCreditos });
-      setReservasActivas([...reservasActivas, { clase_id: claseSeleccionada }]);
-      alert("¡Reserva confirmada con éxito! Se ha descontado 1 crédito de tu cuenta.");
-      setClaseSeleccionada("");
-      setIsModalOpen(false);
-    }
-  };
-
-  const unirseListaEspera = async () => {
-    if (!claseSeleccionada) return;
-    setIsSubmitting(true);
-
-    const { error } = await supabase.from('lista_espera').insert([{ 
-      clase_id: claseSeleccionada,
-      nombre_cliente: perfil.nombre,
-      whatsapp: perfil.whatsapp
-    }]);
-
-    setIsSubmitting(false);
-
-    if (error) {
-      console.error("Error al unirse a la lista:", error);
-      alert("Hubo un error al unirte a la lista. Intenta de nuevo.");
-    } else {
-      alert("¡Listo! Estás en la fila de espera. Si se libera una cama, te avisaremos por WhatsApp.");
-      setClaseSeleccionada("");
-      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error al procesar checkout:", error);
+      setProcesandoPagoId(null); 
+      alert("Hubo un problema de conexión con el servidor de pagos.");
     }
   };
 
   if (!isMounted) return null;
-
-  const convertirAMinutos = (horario: string) => {
-    if (!horario) return 0;
-    const [horaMin, ampm] = horario.split(' ');
-    if (!horaMin || !ampm) return 0;
-    const [h, m] = horaMin.split(':');
-    let hora = parseInt(h, 10);
-    if (ampm.toUpperCase() === 'PM' && hora !== 12) hora += 12;
-    if (ampm.toUpperCase() === 'AM' && hora === 12) hora = 0;
-    return hora * 60 + parseInt(m, 10);
-  };
-
-  const clasesDelDia = clasesDisponibles
-    .filter((c) => c.dia && c.dia.startsWith(diaSeleccionado))
-    .sort((a, b) => convertirAMinutos(a.horario) - convertirAMinutos(b.horario));
-    // Función conectada a Stripe con blindaje de usuario para recarga automática
-    const procesarPagoStripe = async (priceId?: string) => {
-      if (!priceId) return;
-  
-      if (!perfil) {
-        alert("Por favor, inicia sesión o regístrate para que tus créditos se carguen automáticamente a tu cuenta.");
-        router.push("/login");
-        return;
-      }
-      
-      // Cerramos el candado para que no den doble clic
-      setProcesandoPagoId(priceId); 
-      
-      try {
-        const respuesta = await fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            priceId,
-            userId: perfil.id,
-            userEmail: perfil.email 
-          }) 
-        });
-        
-        const datos = await respuesta.json();
-        
-        if (datos.url) {
-          window.location.href = datos.url; 
-        } else {
-          setProcesandoPagoId(null); // Hubo error, liberamos el botón
-          alert("No se pudo iniciar el proceso de pago. Intenta más tarde.");
-        }
-      } catch (error) {
-        console.error("Error al procesar checkout:", error);
-        setProcesandoPagoId(null); // Hubo error, liberamos el botón
-        alert("Hubo un problema de conexión con el servidor de pagos.");
-      }
-    };
   return (
     <section className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
       {/* FONDO ANIMADO - OPTIMIZADO PARA MÓVIL Y PC */}
