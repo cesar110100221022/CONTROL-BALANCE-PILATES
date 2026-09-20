@@ -321,17 +321,26 @@ const [estadisticas, setEstadisticas] = useState({
 
 const cargarEstadisticas = async () => {
   try {
-    // 🛡️ BLINDAJE CONTABLE: Extraer el mes exacto en horario de Monterrey
+    // 🛡️ BLINDAJE CONTABLE: Calculamos el inicio y fin de mes exacto
     const fechaOficial = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" }));
     const year = fechaOficial.getFullYear();
-    const month = String(fechaOficial.getMonth() + 1).padStart(2, '0');
-    const mesActual = `${year}-${month}`; // Extrae YYYY-MM seguro
+    const month = fechaOficial.getMonth() + 1; 
     
-    // 1. Calcular Ingresos Reales y Paquete Estrella desde "transacciones"
-    const { data: transacciones } = await supabase
+    const mesActualStr = String(month).padStart(2, '0');
+    const nextYear = month === 12 ? year + 1 : year;
+    const nextMonthStr = String(month === 12 ? 1 : month + 1).padStart(2, '0');
+
+    const inicioMes = `${year}-${mesActualStr}-01T00:00:00`;
+    const finMes = `${nextYear}-${nextMonthStr}-01T00:00:00`;
+    
+    // 1. Calcular Ingresos Reales usando comandos de fecha válidos (.gte y .lt)
+    const { data: transacciones, error } = await supabase
       .from("transacciones")
       .select("monto_mxn, paquete_comprado, estatus_pago")
-      .like("created_at", `${mesActual}%`);
+      .gte("fecha_pago", inicioMes) // Cambiado a fecha_pago
+      .lt("fecha_pago", finMes);    // Cambiado a fecha_pago
+
+    if (error) console.error("Error al leer transacciones:", error);
 
     const ingresosReales = transacciones
       ?.filter(tx => tx.estatus_pago === "Pagado")
@@ -352,7 +361,7 @@ const cargarEstadisticas = async () => {
     });
 
     // 2. Buscar cumpleañeras del mes
-    const mesActualNumero = String(new Date().getMonth() + 1).padStart(2, '0');
+    const mesActualNumero = String(fechaOficial.getMonth() + 1).padStart(2, '0');
     const { data: perfiles } = await supabase.from("perfiles").select("nombre, fecha_nacimiento, whatsapp");
     const cumpleañeras = (perfiles || []).filter(p => p.fecha_nacimiento && p.fecha_nacimiento.split('-')[1] === mesActualNumero);
     setCumpleañerasMes(cumpleañeras);
@@ -409,9 +418,13 @@ useEffect(() => {
     const { data: dataReservas } = await supabase.from("reservas").select("*").order("fecha_reserva", { ascending: false });
     if (dataReservas) setReservas(dataReservas);
 
-    // BÚSQUEDA DE DEUDORAS FINANCIERAS
+    // BÚSQUEDA DE DEUDORAS FINANCIERAS (BLINDADA CONTRA FANTASMAS)
     const { data: dataDeudas } = await supabase.from("transacciones").select("*").eq("estatus_pago", "Pendiente");
-    if (dataDeudas) setDeudas(dataDeudas);
+    if (dataDeudas && dataClientes) {
+      // Solo guardamos las deudas cuyo WhatsApp coincida con una clienta real de tu lista actual
+      const deudasReales = dataDeudas.filter(deuda => dataClientes.some(c => c.whatsapp === deuda.cliente_whatsapp));
+      setDeudas(deudasReales);
+    }
 
     setIsLoading(false);
   };
@@ -779,30 +792,41 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
     if (clasesCreadas > 0) alert(`¡Éxito! Se generaron ${clasesCreadas} clases fijas automáticamente.`);
     else alert("Todos los horarios fijos ya estaban cargados. No se duplicó nada.");
   };
-  // --- INICIO: FUNCIÓN EXPORTAR A EXCEL (CORTE DE CAJA) ---
-  const descargarCorteCaja = async () => {
+ const descargarCorteCaja = async () => {
     setIsLoading(true);
     try {
-      const hoy = new Date().toISOString().split('T')[0];
-      const mesActual = hoy.substring(0, 7);
+      // 🛡️ Mismo escudo matemático de Monterrey para el Excel
+      const fechaOficial = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Monterrey" }));
+      const year = fechaOficial.getFullYear();
+      const month = fechaOficial.getMonth() + 1; 
+      
+      const mesActualStr = String(month).padStart(2, '0');
+      const nextYear = month === 12 ? year + 1 : year;
+      const nextMonthStr = String(month === 12 ? 1 : month + 1).padStart(2, '0');
+
+      const inicioMes = `${year}-${mesActualStr}-01T00:00:00`;
+      const finMes = `${nextYear}-${nextMonthStr}-01T00:00:00`;
+      const mesActual = `${year}-${mesActualStr}`;
       
       const { data: transacciones } = await supabase
         .from("transacciones")
         .select("*")
-        .like("created_at", `${mesActual}%`)
-        .order('created_at', { ascending: true });
+        .gte("fecha_pago", inicioMes) // Cambiado a fecha_pago y gte
+        .lt("fecha_pago", finMes)     // Cambiado a fecha_pago y lt
+        .order('fecha_pago', { ascending: true }); // Cambiado a fecha_pago
 
       if (!transacciones || transacciones.length === 0) {
         Swal.fire("Sin datos", "No hay ventas registradas este mes.", "info");
         return;
       }
 
-      // El %EF%BB%BF asegura que Excel lea bien los acentos (UTF-8)
+
       let csvContent = "data:text/csv;charset=utf-8,%EF%BB%BF"; 
       csvContent += "Fecha,Clienta,Paquete,Monto Pagado,Metodo de Pago,Estatus\n";
 
-      transacciones.forEach(tx => {
-        const fecha = new Date(tx.created_at).toLocaleDateString('es-MX');
+     transacciones.forEach(tx => {
+        const fecha = new Date(tx.fecha_pago).toLocaleDateString('es-MX'); 
+        // 👇 AGREGAR ESTO: La línea que construye las columnas del Excel
         const fila = `"${fecha}","${tx.cliente_nombre}","${tx.paquete_comprado}",${tx.monto_mxn},"${tx.metodo_pago}","${tx.estatus_pago}"`;
         csvContent += fila + "\n";
       });
