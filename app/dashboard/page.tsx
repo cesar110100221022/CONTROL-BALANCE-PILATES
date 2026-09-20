@@ -102,7 +102,7 @@ export default function DashboardClienta() {
       
       // --- INICIO: AVISO DE CANCELACIÓN AL ADMIN ---
       try {
-        await fetch('/api/send-email', { // O el nombre que le hayas puesto a tu archivo route.ts
+        await fetch('/api/notificacion', { // O el nombre que le hayas puesto a tu archivo route.ts
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
