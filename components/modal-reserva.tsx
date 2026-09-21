@@ -288,15 +288,29 @@ export function ModalReserva({ isOpen, onClose, perfil, onActualizarPerfil, onRe
               // --- INICIO: INTERCEPTOR DE VENTAS (0 CRÉDITOS) ---
               if (claseSeleccionada && perfil.creditos <= 0) {
                 return (
-                  <a 
-                    href="https://wa.me/528124697382?text=Hola%20Liliana,%20ya%20no%20tengo%20cr%C3%A9ditos%20en%20mi%20cuenta.%20Me%20gustar%C3%ADa%20comprar%20un%20paquete%20nuevo." 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    onClick={() => onClose()}
-                    className="w-full block text-center bg-emerald-600 text-white py-3 md:py-4 text-xs md:text-sm uppercase tracking-widest transition-opacity hover:bg-emerald-700 cursor-pointer shadow-lg rounded-md no-underline"
-                  >
-                    💬 Sin créditos: Comprar Paquete
-                  </a>
+                  <div className="flex flex-col gap-2 w-full mt-2 animate-in fade-in zoom-in duration-300">
+                    <p className="text-[10px] uppercase tracking-widest text-red-500 font-bold text-center mb-1">Sin créditos suficientes</p>
+                    
+                    {/* Botón 1: Redirige a comprar con Stripe en la página principal */}
+                    <button 
+                      type="button"
+                      onClick={() => { onClose(); window.location.href = "/"; }}
+                      className="w-full bg-foreground text-background py-3 md:py-4 text-xs md:text-sm font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all duration-300 cursor-pointer shadow-md rounded-md"
+                    >
+                      💳 Pagar con Tarjeta
+                    </button>
+                    
+                    {/* Botón 2: El WhatsApp tradicional para manual */}
+                    <a 
+                      href="https://wa.me/528124697382?text=Hola%20Liliana,%20ya%20no%20tengo%20cr%C3%A9ditos%20en%20mi%20cuenta.%20Me%20gustar%C3%ADa%20comprar%20un%20paquete%20nuevo." 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onClick={() => onClose()}
+                      className="w-full block text-center border border-border bg-transparent text-foreground py-2 md:py-3 text-[10px] md:text-xs font-medium uppercase tracking-wider hover:bg-secondary transition-all cursor-pointer rounded-md no-underline"
+                    >
+                      Transferencia / Efectivo
+                    </a>
+                  </div>
                 );
               }
               // --- FIN: INTERCEPTOR DE VENTAS ---

@@ -130,21 +130,22 @@ export function HeroSection() {
           <a href="#estudio" className="transition-colors duration-300 hover:text-foreground">El Estudio</a>
           <a href="#eventos" className="transition-colors duration-300 hover:text-foreground">Eventos</a>
           {perfil ? (
-            (perfil.rol === 'admin') ? (
-              <button onClick={() => router.push("/admin")} className="group flex items-center gap-3 text-amber-600 font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
-                <div className="w-8 h-8 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center text-amber-600 shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <Crown size={14} strokeWidth={2} />
-                </div>
-                <span>Panel de Control</span>
-              </button>
-            ) : (
+            <div className="flex items-center gap-6">
+              {perfil.rol === 'admin' && (
+                <button onClick={() => router.push("/admin")} className="group flex items-center gap-2 text-amber-600 font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
+                  <div className="w-8 h-8 rounded-full bg-amber-600/10 border border-amber-600/20 flex items-center justify-center text-amber-600 shadow-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <Crown size={14} strokeWidth={2} />
+                  </div>
+                  <span className="hidden lg:inline">Panel Admin</span>
+                </button>
+              )}
               <button onClick={() => router.push("/dashboard")} className="group flex items-center gap-3 text-primary font-medium transition-all duration-300 cursor-pointer hover:opacity-80">
                 <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold uppercase shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                   {perfil.nombre ? perfil.nombre.charAt(0) : "C"}
                 </div>
-                <span>Mi Cuenta ({perfil.creditos} clases)</span>
+                <span>Mi Cuenta ({perfil.creditos || 0})</span>
               </button>
-            )
+            </div>
           ) : (
             <button onClick={() => router.push("/login")} className="transition-colors duration-300 hover:text-foreground cursor-pointer">
               Iniciar Sesión
@@ -169,19 +170,20 @@ export function HeroSection() {
             <a href="#metodo" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Método</a>
             <a href="#estudio" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">El Estudio</a>
             <a href="#eventos" onClick={() => setIsMobileMenuOpen(false)} className="text-xl font-serif text-foreground border-b border-border pb-3">Eventos</a>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col gap-3">
               {perfil ? (
-                (perfil.rol === 'admin' || perfil.email === 'tu-correo@ejemplo.com' || perfil.email === 'controlbalance@gmail.com') ? (
-                  <button onClick={() => router.push("/admin")} className="flex w-full items-center justify-between bg-amber-600/10 p-4 rounded-xl border border-amber-600/20 text-amber-700">
-                    <span className="flex items-center gap-2 font-medium text-lg"><Crown size={18} strokeWidth={2} /> Panel de Control</span>
-                    <ArrowRight size={20} />
-                  </button>
-                ) : (
+                <>
+                  {perfil.rol === 'admin' && (
+                    <button onClick={() => router.push("/admin")} className="flex w-full items-center justify-between bg-amber-600/10 p-4 rounded-xl border border-amber-600/20 text-amber-700">
+                      <span className="flex items-center gap-2 font-medium text-lg"><Crown size={18} strokeWidth={2} /> Panel de Control</span>
+                      <ArrowRight size={20} />
+                    </button>
+                  )}
                   <button onClick={() => router.push("/dashboard")} className="flex w-full items-center justify-between bg-primary text-primary-foreground p-4 rounded-xl shadow-lg">
-                    <span className="font-medium text-lg tracking-wide">Mi Perfil ({perfil.creditos} créditos)</span>
+                    <span className="font-medium text-lg tracking-wide">Mi Perfil ({perfil.creditos || 0} créditos)</span>
                     <ArrowRight size={20} />
                   </button>
-                )
+                </>
               ) : (
                 <button onClick={() => router.push("/login")} className="flex w-full items-center justify-center bg-primary text-primary-foreground p-4 rounded-xl shadow-lg font-medium text-lg tracking-wide uppercase">
                   Iniciar Sesión
