@@ -204,7 +204,7 @@ export function HeroSection() {
       <div className="relative z-10 mx-auto flex min-h-[50vh] md:min-h-[65vh] max-w-[1400px] flex-col justify-center px-6 pb-8 pt-4 md:pb-16 md:px-12">
            
         <p className="animate-rise mb-3 md:mb-6 flex items-center gap-3 text-xs md:text-sm font-bold uppercase tracking-[0.15em] md:tracking-[0.25em] text-foreground/90 drop-shadow-sm [animation-delay:0.1s]">
-          ESTUDIO PILATES REFORMER
+          PILATES REFORMER • SAN PEDRO GARZA GARCÍA
         </p>
 
         {/* Letras con más cuerpo (font-medium) y sombra (drop-shadow) para que no se pierdan con el fondo */}
@@ -252,7 +252,7 @@ export function HeroSection() {
             </svg>
           </div>
           <p className="font-light leading-relaxed">
-            <strong className="font-medium">¿Cómo adquiero o recargo un paquete?</strong> La solicitud de paquetes se realiza mediante <a href="https://wa.me/528124697382?text=Hola%20Liliana,%20me%20gustar%C3%ADa%20adquirir%20un%20paquete%20de%20clases" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline cursor-pointer">WhatsApp</a>. Podrás realizar tu pago por transferencia bancaria, o bien, pagar directamente en el estudio.
+            <strong className="font-medium">¿Cómo adquiero o recargo un paquete?</strong> Elige tu plan abajo y págalo al instante de forma segura con <strong className="font-medium text-primary">Tarjeta de Crédito o Débito</strong>. Si prefieres pagar mediante transferencia o efectivo en el estudio, contáctanos por <a href="https://wa.me/528124697382?text=Hola%20Liliana,%20me%20gustar%C3%ADa%20adquirir%20un%20paquete%20de%20clases" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline cursor-pointer">WhatsApp</a>.
           </p>
         </div>
         {/* --- FIN: BANNER AVISO DE PAGO --- */}
