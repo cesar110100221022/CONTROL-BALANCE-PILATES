@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import { ModalReserva } from "../../components/modal-reserva";
 import Swal from 'sweetalert2';
+import { AlertTriangle } from "lucide-react"; // 👇 ESTA ES LA LÍNEA NUEVA
 
 export default function DashboardClienta() {
   const [perfil, setPerfil] = useState<any>(null);
@@ -248,7 +249,21 @@ export default function DashboardClienta() {
  const misClasesActivas = misReservas
  .filter(r => calcularHorasFaltantes(r.claseInfo.dia, r.claseInfo.horario) > -2)
  .sort((a, b) => calcularHorasFaltantes(a.claseInfo.dia, a.claseInfo.horario) - calcularHorasFaltantes(b.claseInfo.dia, b.claseInfo.horario));
-
+// --- INICIO: LÓGICA DE ALERTA DE CADUCIDAD PARA LA CLIENTA ---
+let expiraPronto = false;
+let diasFaltantes = 0;
+if (perfil?.creditos > 0 && perfil?.fecha_expiracion) {
+  const hoy = new Date();
+  // Extraemos la fecha exacta ignorando zonas horarias
+  const [y, m, d] = perfil.fecha_expiracion.split('-');
+  const fechaExp = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+  const diffTime = fechaExp.getTime() - hoy.getTime();
+  diasFaltantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Si le faltan 7 días o menos (y no es un número negativo), encendemos la alerta
+  if (diasFaltantes >= 0 && diasFaltantes <= 7) expiraPronto = true;
+}
+// --- FIN: LÓGICA DE ALERTA ---
  return (
   <main className="min-h-screen bg-background text-foreground bg-[url('/images/studio-hero.png')] bg-cover bg-fixed bg-center relative">
     <div className="absolute inset-0 bg-background/95 backdrop-blur-3xl"></div>
@@ -278,6 +293,20 @@ export default function DashboardClienta() {
                 <span className="text-8xl font-sans font-light tracking-tighter text-foreground">{perfil?.creditos || 0}</span>
                 <span className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Clases</span>
               </div>
+
+              {/* 👇 AGREGAR ESTO: ALERTA DE VENCIMIENTO VISUAL 👇 */}
+              {expiraPronto && (
+                <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in zoom-in duration-500">
+                  <AlertTriangle className="text-amber-500 shrink-0" size={18} />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 mb-0.5">Aviso Importante</p>
+                    <p className="text-xs text-amber-700/90 leading-relaxed">
+                      Tus clases vencen en <b>{diasFaltantes} {diasFaltantes === 1 ? 'día' : 'días'}</b>. Asegúrate de agendarlas antes de que expiren.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {/* 👆 FIN DEL AGREGADO 👆 */}
               
               <div className="mt-12 flex flex-col gap-3">
                 {/* BOTÓN LIMPIO Y DE ALTO CONTRASTE */}

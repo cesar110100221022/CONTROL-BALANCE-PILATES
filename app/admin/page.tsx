@@ -1123,10 +1123,23 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                   // --- INICIO: LÓGICA DE DETECCIÓN AISLADA ---
                   const totalReservasHistoricas = reservas.filter(r => r.whatsapp === cliente.whatsapp).length;
                   const esTotalmenteNueva = (cliente.creditos || 0) === 0 && totalReservasHistoricas === 0;
-                  // --- FIN: LÓGICA ---
+              
+                // 👇 AGREGAR ESTO: Detector de Caducidad (7 días) 👇
+                let expiraPronto = false;
+                let diasFaltantes = 0;
+                if ((cliente.creditos || 0) > 0 && cliente.fecha_expiracion) {
+                  const hoy = new Date();
+                  const [y, m, d] = cliente.fecha_expiracion.split('-');
+                  const fechaExp = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                  const diffTime = fechaExp.getTime() - hoy.getTime();
+                  diasFaltantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  if (diasFaltantes >= 0 && diasFaltantes <= 7) expiraPronto = true;
+                }
+                // 👆 FIN DEL AGREGADO 👆
+                // --- FIN: LÓGICA ---
 
-                  return (
-                  <tr key={cliente.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
+                return (
+                <tr key={cliente.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
                   <td className="p-5">
                     <p className="font-medium text-lg">{cliente.nombre || "Sin nombre"}</p>
                     <p className="text-xs text-muted-foreground mt-1 tracking-wider">{cliente.whatsapp || "Registrada por email"}</p>
@@ -1137,6 +1150,23 @@ const premiarReferido = async (whatsappReferente: string, clientaId: string, nom
                         <span className="flex items-center gap-1.5"><UserPlus size={12}/> Nueva: Dar Prueba</span>
                       </span>
                     )}
+                    {/* 👇 AGREGAR ESTO: AVISO DE EXPIRACIÓN TEMPRANA 👇 */}
+                    {expiraPronto && (
+                      <div className="mt-3 flex flex-col gap-1.5 items-start">
+                        <span className="inline-block bg-amber-100 text-amber-800 text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded border border-amber-200 shadow-sm">
+                          <span className="flex items-center gap-1.5"><Clock size={12}/> Vence en {diasFaltantes} días</span>
+                        </span>
+                        <a 
+                          href={`https://wa.me/${(cliente.whatsapp || "").replace(/\D/g, '')}?text=${encodeURIComponent(`¡Hola ${cliente.nombre.split(' ')[0]}! 🌟 Te escribo de Control Balance para recordarte amablemente que tus clases actuales vencen en ${diasFaltantes} días. ¡Aprovecha para agendarte esta semanita antes de que expiren! Un abrazo.`)}`} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded text-[10px] uppercase tracking-widest font-bold hover:bg-amber-100 transition-colors shadow-sm cursor-pointer"
+                        >
+                          <MessageCircle size={12}/> Recordatorio x WA
+                        </a>
+                      </div>
+                    )}
+                    {/* 👆 FIN DEL AGREGADO 👆 */}
                     {/* --- INICIO: ASISTENTE DE RENOVACIÓN DE PAQUETES --- */}
                     {(() => {
                       // Si tiene 0 créditos y NO es nueva (es decir, ya ha venido antes)
